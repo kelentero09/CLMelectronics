@@ -1,0 +1,23 @@
+# CLM Catalog — standalone app (excluded from the parent profile-site workspace)
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Env (never commit real keys)
+.env
+.env*.local
+
+# Logs / OS
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Uploads scratch (production uses Supabase Storage)
+public/uploads/

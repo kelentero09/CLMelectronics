@@ -1,0 +1,130 @@
+// CLM Catalog — Production Schema
+// PostgreSQL via Supabase (dedicated CLM Supabase project — NEVER shared
+// with any other business/project).
+// NOTE: there is intentionally NO price / currency / monetary column
+// anywhere in this schema. This catalog is for information and inquiry only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+}
+
+enum ProductCondition {
+  NEW
+  USED
+  REFURBISHED
+  SURPLUS
+  FOR_PARTS
+}
+
+enum ProductAvailability {
+  IN_STOCK
+  LOW_STOCK
+  RESERVED
+  SOLD
+  UNAVAILABLE
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  COMPLETED
+}
+
+// Application-level authorization (Supabase Auth owns credentials;
+// this table stores only the role, linked by email).
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id               String              @id @default(cuid())
+  name             String
+  slug             String              @unique
+  referenceCode    String              @unique
+  categoryId       String?
+  category         Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  model            String?
+  partNumber       String?
+  manufacturer     String?
+  shortDescription String?             @db.VarChar(300)
+  description      String?             @db.Text
+  specifications   Json?
+  datasheetUrl     String?
+  condition        ProductCondition?
+  availability     ProductAvailability @default(IN_STOCK)
+  published        Boolean             @default(false)
+  featured         Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+  images           ProductImage[]
+  inquiries        Inquiry[]
+
+  @@index([categoryId])
+  @@index([published, deletedAt])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  position  Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model Inquiry {
+  id         String        @id @default(cuid())
+  productId  String?
+  product    Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productRef String?
+  name       String
+  email      String
+  phone      String?
+  company    String?
+  message    String        @db.Text
+  status     InquiryStatus @default(NEW)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@map("inquiries")
+}
