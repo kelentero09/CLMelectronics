@@ -73,3 +73,18 @@ export function storagePathFromUrl(url: string): string | null {
   if (idx === -1) return null;
   return url.slice(idx + marker.length);
 }
+
+/** Board-repair photo upload — converted to WebP server-side, same bucket. */
+export async function uploadRepairImage(opts: { file: File }) {
+  assertValidImageFile({ type: opts.file.type, size: opts.file.size, name: opts.file.name });
+  const webpBuffer = await convertToWebP(opts.file);
+  const ts = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `clm/repairs/${ts}-${rand}-${sanitizeFileName(opts.file.name)}`;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage
+    .from(PRODUCT_IMAGES_BUCKET)
+    .upload(path, webpBuffer, { upsert: false, contentType: "image/webp" });
+  if (error) throw error;
+  return { path: data.path, publicUrl: getPublicImageUrl(data.path) };
+}

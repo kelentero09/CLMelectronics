@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { boardRepairRecords } from "@/data/board-repair";
+import type { BoardRepairRecord } from "@/data/board-repair";
 
 function PhotoCell({ board, image }: { board: string; image: string | null }) {
   const [enlarged, setEnlarged] = useState(false);
@@ -44,27 +44,27 @@ function PhotoCell({ board, image }: { board: string; image: string | null }) {
   );
 }
 
-export default function BoardRepairBrowser() {
+export default function BoardRepairBrowser({ records }: { records: BoardRepairRecord[] }) {
   const [station, setStation] = useState("All");
   const [model, setModel] = useState("All");
   const [query, setQuery] = useState("");
 
-  const stations = useMemo(() => ["All", ...Array.from(new Set(boardRepairRecords.map((r) => r.station)))], []);
-  const models = useMemo(() => ["All", ...Array.from(new Set(boardRepairRecords.map((r) => r.model)))], []);
+  const stations = useMemo(() => ["All", ...Array.from(new Set(records.map((r) => r.station)))], [records]);
+  const models = useMemo(() => ["All", ...Array.from(new Set(records.map((r) => r.model)))], [records]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return boardRepairRecords.filter((r) => {
+    return records.filter((r) => {
       if (station !== "All" && r.station !== station) return false;
       if (model !== "All" && r.model !== model) return false;
       if (q && !`${r.boardDescription} ${r.model} ${r.problem} ${r.station}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [station, model, query]);
+  }, [station, model, query, records]);
 
-  const total = boardRepairRecords.length;
-  const highest = Math.max(...boardRepairRecords.map((r) => r.repairRate));
-  const processes = new Set(boardRepairRecords.map((r) => r.station)).size;
+  const total = records.length;
+  const highest = total > 0 ? Math.max(...records.map((r) => r.repairRate)) : 0;
+  const processes = new Set(records.map((r) => r.station)).size;
 
   return (
     <>

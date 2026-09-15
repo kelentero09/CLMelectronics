@@ -8,6 +8,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { FIXED_CATEGORIES } from "../lib/catalog";
 import { slugify } from "../lib/utils";
+import { boardRepairRecords } from "../data/board-repair";
 
 const prisma = new PrismaClient();
 
@@ -122,6 +123,36 @@ async function main() {
   } else {
     console.log(`Skipped sample products (${existingSamples} already exist).`);
   }
+
+  let repairUpserts = 0;
+  for (let i = 0; i < boardRepairRecords.length; i++) {
+    const r = boardRepairRecords[i];
+    await prisma.boardRepair.upsert({
+      where: { key: r.id },
+      update: {
+        station: r.station,
+        model: r.model,
+        boardDescription: r.boardDescription,
+        image: r.image,
+        problem: r.problem,
+        repairRate: r.repairRate,
+        sortOrder: i,
+      },
+      create: {
+        key: r.id,
+        station: r.station,
+        model: r.model,
+        boardDescription: r.boardDescription,
+        image: r.image,
+        problem: r.problem,
+        repairRate: r.repairRate,
+        sortOrder: i,
+        isActive: true,
+      },
+    });
+    repairUpserts++;
+  }
+  console.log(`Board repairs seeded (${repairUpserts} upserted).`);
 }
 
 main()

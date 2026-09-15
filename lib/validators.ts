@@ -72,6 +72,16 @@ export const inquirySchema = z.object({
 
 export const inquiryStatusSchema = z.enum(["NEW", "CONTACTED", "COMPLETED"]);
 
+export const boardRepairSchema = z.object({
+  station: z.string().min(2).max(80),
+  model: z.string().min(1).max(120),
+  boardDescription: z.string().min(2).max(200),
+  problem: z.string().min(2).max(500),
+  repairRate: z.coerce.number().int().min(0).max(100).default(95),
+  sortOrder: z.coerce.number().int().min(0).max(10000).default(0),
+  isActive: z.boolean().default(true),
+});
+
 export function firstIssueMessage(error: z.ZodError): string {
   const issue = error.issues[0];
   if (!issue) return "Invalid input";

@@ -128,3 +128,26 @@ model Inquiry {
   @@index([status, createdAt])
   @@map("inquiries")
 }
+
+// Board repair capability records (managed in /admin/repairs, shown on
+// /board-repair). `key` is the stable seed key (e.g. "da-01"); new admin
+// entries get a generated key. Images are WebP — either local /public paths
+// or Supabase Storage public URLs (uploads convert to WebP server-side).
+model BoardRepair {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  station          String
+  model            String
+  boardDescription String
+  image            String?
+  problem          String
+  repairRate       Int      @default(95)
+  sortOrder        Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([station])
+  @@index([isActive])
+  @@map("board_repairs")
+}
