@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus } from "lucide-react";
@@ -32,9 +33,18 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
   return (
     <div className="flex min-h-screen bg-slate-100">
       <aside className="hidden w-60 shrink-0 flex-col bg-navy-950 text-slate-200 md:flex" aria-label="Admin navigation">
-        <div className="border-b border-white/10 px-5 py-4">
-          <p className="text-sm font-bold text-white">CLM Catalog Admin</p>
-          <p className="truncate text-xs text-slate-400">{adminEmail}</p>
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+          <Image
+            src="/logo.webp"
+            alt="CLM Electronics logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded bg-white object-contain"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-white">CLM Catalog Admin</p>
+            <p className="truncate text-xs text-slate-400">{adminEmail}</p>
+          </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
@@ -66,7 +76,16 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
-          <p className="text-sm font-bold text-navy-900 md:hidden">CLM Admin</p>
+          <p className="flex items-center gap-2 text-sm font-bold text-navy-900 md:hidden">
+            <Image
+              src="/logo.webp"
+              alt="CLM Electronics logo"
+              width={28}
+              height={28}
+              className="h-7 w-7 rounded object-contain"
+            />
+            CLM Admin
+          </p>
           <nav aria-label="Admin mobile" className="flex flex-wrap items-center gap-1 text-xs md:hidden">
             {nav.map((item) => (
               <Link

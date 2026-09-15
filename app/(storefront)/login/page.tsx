@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import { Input, Label, FieldError } from "@/components/ui/form";
@@ -48,6 +49,16 @@ function LoginForm() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-14 sm:px-6">
+      <div className="mb-4 flex justify-center">
+        <Image
+          src="/logo.webp"
+          alt="CLM Electronics logo"
+          width={64}
+          height={64}
+          className="h-16 w-16 rounded object-contain"
+          priority
+        />
+      </div>
       <Card>
         <CardContent>
           <h1 className="text-xl font-bold text-navy-900">Admin Sign In</h1>

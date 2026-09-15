@@ -1,4 +1,9 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 
 const links = [
   { label: "Products", href: "/" },
@@ -11,16 +16,20 @@ const links = [
 ];
 
 export function SiteHeader() {
+  const [open, setOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-navy-950/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-3" aria-label="CLM catalog home">
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 items-center justify-center rounded bg-steel-500 text-sm font-bold text-white"
-          >
-            CLM
-          </span>
+          <Image
+            src="/logo.webp"
+            alt="CLM Electronics logo"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded bg-white object-contain"
+            priority
+          />
           <span className="leading-tight">
             <span className="block text-sm font-bold tracking-wide text-white sm:text-base">
               CLM ELECTRONICS
@@ -47,14 +56,43 @@ export function SiteHeader() {
             Contact CLM
           </Link>
         </nav>
-        <nav aria-label="Mobile" className="flex items-center gap-1 md:hidden">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className="rounded px-2 py-2 text-xs font-medium text-slate-300 hover:text-white">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          className="rounded p-2 text-slate-200 hover:bg-white/10 hover:text-white md:hidden"
+        >
+          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
+      {open && (
+        <nav id="mobile-menu" aria-label="Mobile" className="border-t border-white/10 px-4 pb-4 pt-2 md:hidden">
+          <ul className="space-y-1">
+            {links.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="block rounded px-3 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5 hover:text-white"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            <li className="pt-2">
+              <Link
+                href="/contact"
+                onClick={() => setOpen(false)}
+                className="block rounded bg-steel-500 px-3 py-2.5 text-center text-sm font-semibold text-white hover:bg-steel-600"
+              >
+                Contact CLM
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }

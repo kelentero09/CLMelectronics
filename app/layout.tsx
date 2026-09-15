@@ -15,6 +15,11 @@ export const metadata: Metadata = {
     description:
       "Equipment, spare parts, consumables, and materials for semiconductor and manufacturing industries.",
     type: "website",
+    images: ["/logo.webp"],
+  },
+  icons: {
+    icon: "/logo.webp",
+    apple: "/logo.webp",
   },
 };
 

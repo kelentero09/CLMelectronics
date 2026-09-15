@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function SiteFooter() {
@@ -5,7 +6,16 @@ export function SiteFooter() {
     <footer className="bg-navy-950 text-slate-300">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3">
         <div>
-          <p className="text-base font-bold text-white">CLM Electronics Engineering Services</p>
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo.webp"
+              alt="CLM Electronics logo"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded bg-white object-contain"
+            />
+            <p className="text-base font-bold text-white">CLM Electronics Engineering Services</p>
+          </div>
           <p className="mt-2 max-w-sm text-sm leading-relaxed">
             B2B product catalog for semiconductor and manufacturing equipment, spare parts,
             consumables, and materials. Information and inquiry only.

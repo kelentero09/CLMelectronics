@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Search, SlidersHorizontal } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PAGE_SIZE } from "@/lib/catalog";
 import { ProductCard } from "@/components/storefront/product-card";
+import { CategoryTabs } from "@/components/storefront/category-tabs";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { Input } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -22,7 +24,6 @@ type SearchParams = {
   manufacturer?: string;
   condition?: string;
   availability?: string;
-  sort?: string;
   page?: string;
 };
 
@@ -57,7 +58,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const manufacturerParam = sp.manufacturer ?? "";
   const condition = sp.condition ?? "";
   const availability = sp.availability ?? "";
-  const sort = sp.sort ?? "newest";
   const page = Math.max(1, Number(sp.page || 1) || 1);
   const skip = (page - 1) * PAGE_SIZE;
 
@@ -76,9 +76,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     ];
   }
 
-  let orderBy: Record<string, string> = { createdAt: "desc" };
-  if (sort === "name-asc") orderBy = { name: "asc" };
-  else if (sort === "name-desc") orderBy = { name: "desc" };
+  const orderBy: Record<string, string> = { createdAt: "desc" };
 
   let products: CatalogProduct[] = [];
   let total = 0;
@@ -154,7 +152,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   if (manufacturerParam) base.manufacturer = manufacturerParam;
   if (condition) base.condition = condition;
   if (availability) base.availability = availability;
-  if (sort && sort !== "newest") base.sort = sort;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -174,34 +171,24 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
       </div>
 
-      {/* Category pills */}
-      <nav aria-label="Categories" className="mt-4 flex flex-wrap gap-2">
-        <Link
-          href={buildLink(base, { category: undefined, page: undefined })}
-          aria-current={!categoryParam ? "page" : undefined}
-          className={cn(
-            "rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide",
-            !categoryParam ? "border-navy-900 bg-navy-900 text-white" : "border-slate-300 bg-white hover:border-navy-900"
-          )}
-        >
-          All
-        </Link>
-        {categories.map((c) => (
-          <Link
-            key={c.id}
-            href={buildLink(base, { category: c.slug, page: undefined })}
-            aria-current={categoryParam === c.slug ? "page" : undefined}
-            className={cn(
-              "rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide",
-              categoryParam === c.slug
-                ? "border-navy-900 bg-navy-900 text-white"
-                : "border-slate-300 bg-white hover:border-navy-900"
-            )}
-          >
-            {c.name} <span className="opacity-60">({c._count.products})</span>
-          </Link>
-        ))}
-      </nav>
+      {/* Category tabs — single scrollable line with side arrows */}
+      <CategoryTabs
+        links={[
+          {
+            key: "all",
+            label: "All",
+            href: buildLink(base, { category: undefined, page: undefined }),
+            active: !categoryParam,
+          },
+          ...categories.map((c) => ({
+            key: c.id,
+            label: c.name,
+            href: buildLink(base, { category: c.slug, page: undefined }),
+            active: categoryParam === c.slug,
+            count: c._count.products,
+          })),
+        ]}
+      />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
         {/* Sidebar filters (desktop) */}
@@ -216,38 +203,43 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </aside>
 
         <div className="min-w-0 space-y-4">
-          {/* Search + sort row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <form action="/" method="get" className="flex min-w-0 flex-1 gap-2" role="search">
+          {/* Single horizontal line: filter (leftmost) + search bar */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Filter leftmost (mobile only, desktop uses sidebar) */}
+            <details className="relative shrink-0 lg:hidden">
+              <summary
+                aria-label="Toggle filters"
+                className="relative flex cursor-pointer list-none items-center rounded border border-slate-300 bg-white p-2.5 text-navy-900 hover:border-navy-900 [&::-webkit-details-marker]:hidden"
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                {(manufacturerParam || condition || availability) && (
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-navy-900 px-1 text-[11px] font-bold text-white">
+                    {[manufacturerParam, condition, availability].filter(Boolean).length}
+                  </span>
+                )}
+              </summary>
+              <div className="absolute left-0 top-full z-30 mt-2 w-[280px] max-w-[80vw] shadow-lg">
+                <FilterPanel
+                  base={base}
+                  manufacturerParam={manufacturerParam}
+                  manufacturers={manufacturers}
+                  condition={condition}
+                  availability={availability}
+                />
+              </div>
+            </details>
+            <form action="/" method="get" className="flex min-w-0 flex-1 gap-1.5 sm:gap-2" role="search">
               {categoryParam && <input type="hidden" name="category" value={categoryParam} />}
               {manufacturerParam && <input type="hidden" name="manufacturer" value={manufacturerParam} />}
               {condition && <input type="hidden" name="condition" value={condition} />}
               {availability && <input type="hidden" name="availability" value={availability} />}
-              {sort && sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
-              <Input name="q" defaultValue={q} placeholder="Search name, reference code, model, part number…" aria-label="Search products" className="min-w-0 flex-1" />
-              <Button type="submit">Search</Button>
+              <Input name="q" defaultValue={q} placeholder="Search products…" aria-label="Search products" className="min-w-0 flex-1" />
+              <Button type="submit" aria-label="Search" className="shrink-0 px-3 sm:px-4">
+                <Search className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Search</span>
+              </Button>
             </form>
-            <div className="flex items-center gap-1 text-xs" aria-label="Sort products">
-              <span className="text-slate-500">Sort:</span>
-              <Link href={buildLink(base, { sort: undefined, page: undefined })} className={cn("rounded border px-2 py-1.5", !sort || sort === "newest" ? "border-navy-900 bg-navy-900 text-white" : "bg-white")}>Newest</Link>
-              <Link href={buildLink(base, { sort: "name-asc", page: undefined })} className={cn("rounded border px-2 py-1.5", sort === "name-asc" ? "border-navy-900 bg-navy-900 text-white" : "bg-white")}>A–Z</Link>
-              <Link href={buildLink(base, { sort: "name-desc", page: undefined })} className={cn("rounded border px-2 py-1.5", sort === "name-desc" ? "border-navy-900 bg-navy-900 text-white" : "bg-white")}>Z–A</Link>
-            </div>
           </div>
-
-          {/* Mobile filters */}
-          <details className="rounded-lg border border-slate-200 bg-white lg:hidden">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-navy-900">Filters</summary>
-            <div className="border-t border-slate-100 p-4">
-              <FilterPanel
-                base={base}
-                manufacturerParam={manufacturerParam}
-                manufacturers={manufacturers}
-                condition={condition}
-                availability={availability}
-              />
-            </div>
-          </details>
 
           {!dbOnline ? (
             <EmptyState
