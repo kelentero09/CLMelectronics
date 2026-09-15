@@ -1,0 +1,533 @@
+================================================================================
+CLM ELECTRONICS ENGINEERING SERVICES — PRODUCT CATALOG & ADMIN DASHBOARD
+IMPLEMENTATION SPECIFICATION
+================================================================================
+Copy-paste-ready instruction set for a coding agent. Use this file as the
+primary implementation reference for building the CLM catalog as a SEPARATE,
+standalone project. It must NOT depend on, import from, or share a database
+with any other codebase (including "SureParts," which may only be used as a
+loose conceptual reference for what a product listing + admin dashboard does).
+
+Before writing any code, inspect the target CLM project structure first, then
+build everything below independently.
+
+--------------------------------------------------------------------------------
+1. PROJECT OBJECTIVE
+--------------------------------------------------------------------------------
+Build a B2B, company-oriented product catalog website for:
+
+  CLM Electronics Engineering Services
+  #9 Bayabas St., Mutual Homes Putatan, Muntinlupa City, Philippines
+  Contact: 09979269559 / 88384882
+  Email: er.canlas23@gmail.com
+  Established: January 10, 2023
+
+The company provides technical support and engineering services for the
+semiconductor and manufacturing industries. Its main services include:
+
+  - Technical support for minor/major repair
+  - Assessment and technical support
+  - Preventive and predictive maintenance
+  - Machine basics and technical training
+  - Process support and qualification
+  - Machine baselining and A1 conditioning
+  - Machine and sub-assembly rebuild/overhaul
+  - Minor/major parts replacement and calibration
+  - Outsourced machine spare parts and installation
+  - After-sales/service support
+
+The catalog presents products (equipment, parts, consumables, materials,
+supplies) to companies and accredited company customers for INFORMATION and
+INQUIRY purposes. It is a product/service presentation and inquiry channel —
+NOT an online store. There is no online selling, no cart, no checkout, and no
+payment. Board repair capability should be reflected in the company profile
+content and should be supportable by future product/service content.
+
+--------------------------------------------------------------------------------
+2. RECOMMENDED ARCHITECTURE
+--------------------------------------------------------------------------------
+- A single web application with two surfaces sharing one database:
+  a) PUBLIC CATALOG (no login required): home/listing, category browsing,
+     product detail, search/filter, contact/inquiry forms.
+  b) ADMIN DASHBOARD (login required): product and category management.
+- Server-rendered pages where possible (listing, detail) for performance and
+  SEO; client components only where interactivity demands it (filters, forms,
+  image gallery, admin tables).
+- Server-side mutations (server actions or equivalent API endpoints) for all
+  admin create/update/delete operations. Never trust client input; validate on
+  the server.
+- One shared image/file storage bucket (or local uploads folder, depending on
+  the target project's hosting) for product images and optional datasheets.
+- Suggested stack (adapt to whatever the target project already uses — do NOT
+  introduce a second stack):
+  Next.js (App Router) + TypeScript + Prisma (PostgreSQL) + Zod + Tailwind CSS
+  + Supabase Auth (or the target project's existing auth) + Supabase Storage
+  (or equivalent object storage) for images.
+- Do NOT add ecommerce libraries, cart state libraries, payment SDKs, or
+  pricing utilities.
+
+--------------------------------------------------------------------------------
+3. DATABASE ENTITIES / MODELS
+--------------------------------------------------------------------------------
+Create the following tables (names may be adapted to the target project's
+conventions). All CLM tables must be NEW — never reuse or alter tables that
+belong to another business/project.
+
+3.1 Category
+  - id (cuid/uuid, PK)
+  - name (unique, required) — one of the five fixed categories (see §5)
+  - slug (unique, required, lowercase hyphenated)
+  - description (text, nullable)
+  - image (URL string, nullable)
+  - isActive (boolean, default true)
+  - sortOrder (int, default 0; controls display order)
+  - createdAt / updatedAt
+
+3.2 Product
+  - id (cuid/uuid, PK)
+  - name (required)
+  - slug (unique, required)
+  - referenceCode (unique, required — the CLM product reference/code; acts
+    like an SKU but carries NO pricing meaning)
+  - categoryId (FK → Category, nullable, ON DELETE SET NULL)
+  - model (string, nullable — model number)
+  - partNumber (string, nullable)
+  - manufacturer (free-text string, nullable — e.g. "Omron", "Siemens";
+    stored as plain text, NOT a foreign key, unless the target project
+    already has a standalone manufacturer/brand table worth reusing)
+  - shortDescription (varchar ~300, nullable — one-line card teaser)
+  - description (text, nullable — full description)
+  - specifications (JSON array of { key, value } objects, nullable;
+    max 50 entries; e.g. [{ "key": "Voltage", "value": "24V DC" }])
+  - datasheetUrl (URL string, nullable — optional datasheet/document link)
+  - condition (enum, nullable: NEW | USED | REFURBISHED | SURPLUS | FOR_PARTS)
+  - availability (enum, default IN_STOCK: IN_STOCK | LOW_STOCK | RESERVED |
+    SOLD | UNAVAILABLE). Public labels should be B2B-friendly, e.g.:
+    Available / Limited / Reserved / Allocated / On Request.
+  - published (boolean, default false — only published products appear
+    on the public catalog)
+  - featured (boolean, default false — powers a "Featured" section)
+  - createdAt / updatedAt
+  - deletedAt (nullable timestamp — soft delete; soft-deleted products NEVER
+    appear on the public catalog)
+  *** THERE IS NO price, salePrice, currency, quantity-for-sale, or any
+  *** monetary column on this table. This is intentional and mandatory.
+
+3.3 ProductImage
+  - id (cuid/uuid, PK)
+  - productId (FK → Product, ON DELETE CASCADE)
+  - url (required)
+  - alt (nullable)
+  - position (int, default 0 — gallery order)
+  - isPrimary (boolean, default false — card thumbnail)
+  - createdAt
+
+3.4 Inquiry (contact/inquiry requests from the public forms)
+  - id (cuid/uuid, PK)
+  - productId (FK → Product, NULLABLE, ON DELETE SET NULL — null means a
+    general inquiry; a set value means "inquiry about this product")
+  - productRef (string, nullable — snapshot of the product name/reference
+    code at submit time, so the inquiry stays readable if the product changes)
+  - name (required), email (required), phone (nullable), company (nullable —
+    important for B2B; always include a Company field on forms)
+  - message (text, required, min 10 chars)
+  - status (enum, default NEW: NEW | CONTACTED | COMPLETED)
+  - createdAt / updatedAt
+  - If the target project already has an inquiry/contact table with an
+    equivalent shape, REUSE it (adding productRef if missing) instead of
+    creating a duplicate.
+
+3.5 User (admin access)
+  - id, email (unique), name (nullable), role (enum; at minimum ADMIN),
+    createdAt / updatedAt.
+  - Credentials are owned by the auth provider; this table stores only the
+    application role. Admin-only routes/actions must check role === ADMIN.
+
+--------------------------------------------------------------------------------
+4. PRODUCT FIELDS (SUMMARY)
+--------------------------------------------------------------------------------
+Every product supports: name, slug, referenceCode, category, model number,
+part number, manufacturer (free text), short description, full description,
+specifications (key/value list), datasheet/document URL (optional), condition
+(optional), availability/status, one primary image + optional additional
+images, published flag, featured flag, soft-delete. NO price-related field of
+any kind exists at the model, API, or UI layer.
+
+--------------------------------------------------------------------------------
+5. CATEGORY STRUCTURE
+--------------------------------------------------------------------------------
+Exactly five flat (non-nested) categories, seeded at setup:
+
+  1. Equipment                  (slug: equipment)
+  2. Spare Parts                (slug: spare-parts)
+  3. Manufacturing Consumables   (slug: manufacturing-consumables)
+  4. ESD Materials              (slug: esd-materials)
+  5. Office Supplies            (slug: office-supplies)
+
+- Seed script must upsert these five (idempotent — safe to re-run).
+- Admins can edit name/description/image/sort order/active flag, and may add
+  future categories, but must NOT be able to break the five core slugs
+  casually (warn before renaming a slug; slugs appear in public URLs).
+- A category with products (or sub-usage) must NOT be hard-deleted; offer
+  deactivate instead.
+
+--------------------------------------------------------------------------------
+6. ADMIN DASHBOARD REQUIREMENTS
+--------------------------------------------------------------------------------
+Location: a protected /admin section (e.g. /admin, /admin/products,
+/admin/products/new, /admin/products/[id]/edit, /admin/categories,
+/admin/inquiries). All routes require an authenticated ADMIN user; non-admins
+are redirected to login or home.
+
+6.1 Authentication
+  - Email/password login (via the target project's auth provider).
+  - Sessions checked server-side on every admin page and every mutation.
+  - Non-admin users get a 403/redirect, never the admin UI.
+
+6.2 Product management
+  - View products: searchable/filterable table (search text, category,
+    availability, condition, published state), paginated (~10–20 per page),
+    sorted by most recently updated.
+  - Table columns: thumbnail, name/slug, reference code, category,
+    manufacturer, availability, published, updated date. NO price column.
+  - Add product: form with all §4 fields; slug auto-generated from name but
+    editable; image upload with preview (max 10 images, ≤5 MB each,
+    JPEG/PNG/WebP/AVIF); specifications as dynamic key/value rows (max 50);
+    Published and Featured checkboxes.
+  - Edit product: same form prefilled; manage existing images (set primary,
+    delete); append new images.
+  - Delete product: SOFT delete only (sets deletedAt + unpublishes). Provide
+    restore. No hard delete from the UI.
+  - Publish/unpublish: one-click toggle from the list and the edit form.
+  - Assign/change category via dropdown of active categories.
+  - Edit specifications, manufacturer, model/part number, availability/status.
+
+6.3 Category management
+  - List categories with product counts; create/edit/deactivate; image upload
+    optional; sort order field controls public display order.
+  - Guard deletes as described in §5.
+
+6.4 Inquiry management (recommended)
+  - List inquiries (filter by status), view detail, mark CONTACTED/COMPLETED.
+  - Show linked product reference when present.
+
+6.5 Dashboard UI
+  - Clean, simple layout: sidebar nav (Dashboard, Products, Add Product,
+    Categories, Inquiries, Settings/Logout), top header with user info,
+    responsive down to mobile (collapsible sidebar, horizontally scrollable
+    tables or card fallback on small screens).
+  - Toasts for success/error on every mutation; inline validation messages.
+
+--------------------------------------------------------------------------------
+7. PUBLIC CATALOG REQUIREMENTS
+--------------------------------------------------------------------------------
+7.1 Product listing (e.g. /catalog or home page section)
+  - Responsive grid of product cards (2 cols mobile → 3–4 cols desktop).
+  - Each card shows: product image (or branded placeholder), product name,
+    category, short description, model/part number when available,
+    availability/status badge. NEVER any price.
+  - Category navigation: five category pills/tabs/sidebar (All + the five
+    categories). Clicking filters the grid; the active category is reflected
+    in the URL query string (e.g. ?category=esd-materials) so links are
+    shareable.
+  - Pagination (12 per page is a good default) preserving active filters.
+  - Empty state with "clear filters" and a link to the contact page.
+
+7.2 Category browsing
+  - Routes: /catalog?category=<slug> (and/or /categories/<slug>).
+  - Show category name, description, product count, then its products.
+  - Unknown slugs → friendly "category not found," never a crash.
+
+7.3 Product detail (e.g. /catalog/<slug> or /products/<slug>)
+  - See §8.
+
+7.4 Company context
+  - Header/nav: Products/Catalog, Categories, About, Services, Contact.
+  - About/Services pages describe CLM (semiconductor/manufacturing focus,
+    service list from §1, board repair capability, company address, phones,
+    email, established date). Contact page shows address, phones, email,
+    business hours, map embed, and the general inquiry form.
+
+--------------------------------------------------------------------------------
+8. PRODUCT DETAIL REQUIREMENTS
+--------------------------------------------------------------------------------
+For a published, non-deleted product at its canonical URL:
+  - Breadcrumb: Catalog / <Category> / <Product name>.
+  - Image gallery: main image + thumbnails, responsive, lazy-loaded.
+  - Product name, category, manufacturer (if set), reference code, model,
+    part number, availability/status badge, condition badge (if set).
+  - Short + full description.
+  - Specifications table (alternating row shading; key/value pairs).
+  - Datasheet/document button/link WHEN a datasheetUrl exists; hidden
+    otherwise.
+  - Inquiry/contact CTA block (NOT a buy button): buttons such as
+    "Request Information", "Inquire About This Product", or "Contact CLM"
+    that scroll to an on-page product inquiry form (pre-tagged with the
+    product) and/or link to the contact page.
+  - Product inquiry form on the page (name, email, phone optional, company,
+    message pre-contextualized with the product reference).
+  - Related products (same category, up to ~4) WITHOUT prices.
+  - Unpublished/deleted/unknown slugs → standard 404 page.
+  - SEO: unique title/meta description per product, canonical URL, OpenGraph
+    tags. Structured data (schema.org Product) WITHOUT any offers/price
+    block.
+  - ABSOLUTELY NO price display: no "Price on Request"替身 pricing widgets,
+    no currency symbols tied to the product, no "add to cart."
+
+--------------------------------------------------------------------------------
+9. SEARCH / FILTER REQUIREMENTS
+--------------------------------------------------------------------------------
+- Full-text-ish search across: product name, reference code, model, part
+  number, manufacturer, description. Case-insensitive substring match is
+  acceptable for v1.
+- Filters: category, availability, condition (optional), manufacturer
+  (optional), featured (optional).
+- Sort options: Newest, Name A–Z (and Name Z–A if trivial). NO price sorting
+  (there is no price to sort by).
+- Search + filters + sort compose in one query string and survive pagination.
+- Admin search (§6.2) mirrors the same fields plus published state.
+
+--------------------------------------------------------------------------------
+10. IMAGE / FILE HANDLING
+--------------------------------------------------------------------------------
+- Allowed image types: JPEG, PNG, WebP, AVIF. Max 5 MB per file.
+  Max 10 images per product. Validate type + size on client AND server.
+- Convert uploads to WebP (quality ~80) on the server before storage to
+  save space (use sharp or equivalent; skip only if the target stack has no
+  image pipeline — then store originals).
+- Storage layout: product-images/clm/<productId>/<timestamp>-<rand>-<name>.webp
+  (or the target project's equivalent bucket/folder convention).
+- Public URL resolution helper; primary image = card thumbnail.
+- Deleting a product image removes both the DB row and the stored object
+  (best effort; DB delete must succeed even if storage cleanup fails).
+- Optional datasheet/document: accept PDF (and optionally DOC/DOCX/XLS/XLSX,
+  ≤10–20 MB), store in a separate documents path, serve as a plain download
+  link. Validate MIME type and size server-side.
+- Missing image → professional branded placeholder (company initials /
+  reference code), never a broken <img>.
+
+--------------------------------------------------------------------------------
+11. AUTHENTICATION / AUTHORIZATION
+--------------------------------------------------------------------------------
+- Public catalog: fully open, no login.
+- Admin: login required; role check (ADMIN) on every admin page, server
+  action, and API route. Defense in depth: middleware/page check + per-action
+  requireAdmin() guard.
+- Inquiry submission: public, rate-limited (e.g. ≤5 per minute per IP),
+  with basic spam defenses (honeypot field and/or CAPTCHA if the target
+  project supports it).
+- Never expose service-role/storage-admin keys to the browser.
+
+--------------------------------------------------------------------------------
+12. API / SERVER ACTION REQUIREMENTS
+--------------------------------------------------------------------------------
+Implement (as server actions or REST endpoints, per target conventions):
+
+  Products:   createProduct, updateProduct, softDeleteProduct,
+              restoreProduct, togglePublish, deleteImage, setPrimaryImage
+              (+ reorderImages if cheap).
+  Categories: createCategory, updateCategory, deleteCategory (guarded),
+              toggleActive.
+  Inquiries:  submitInquiry (public, validated, rate-limited),
+              updateInquiryStatus (admin).
+  Queries:    listPublishedProducts (filters/search/sort/pagination),
+              getPublishedProductBySlug (with images + category),
+              listCategories (active only, with counts),
+              adminListProducts / adminGetProduct (include unpublished).
+
+- Every mutation revalidates/refreshes affected listing + detail pages.
+- Every error returns a user-safe message; log the technical detail
+  server-side. Auth failures → 401/403 or login redirect, never a stack
+  trace to the browser.
+- Public query paths must be incapable of leaking drafts, soft-deleted rows,
+  or any pricing data (none exists — keep it that way).
+
+--------------------------------------------------------------------------------
+13. UI / UX REQUIREMENTS
+--------------------------------------------------------------------------------
+- Industrial B2B style: semiconductor/manufacturing/engineering feel;
+  professional corporate appearance; clean layout; strong typography.
+- Palette: dark navy + charcoal + white with a professional blue accent.
+  (Example anchors: navy #0B1D33, steel blue accent; neutrals for surfaces.)
+- Product cards: clean, generous spacing, status badge, readable type —
+  nothing resembling a marketplace deal tile (no strikethrough prices, no
+  "SALE" flashes, no star-rating-for-purchase widgets).
+- Buttons: primary "Request Information / Inquire" CTAs; secondary
+  "Contact CLM" / "View Datasheet" styles.
+- Forms: labeled inputs, inline errors, character counters on long fields,
+  disabled submit state while saving, success confirmations.
+- Accessibility: semantic headings, alt text on all images, keyboard-usable
+  gallery/filters, sufficient color contrast, focus states.
+- No lorem ipsum and no emoji in the UI. Business copy must be factual (see
+  §15 on data accuracy).
+
+--------------------------------------------------------------------------------
+14. RESPONSIVE REQUIREMENTS
+--------------------------------------------------------------------------------
+Must work properly on desktop, laptop, tablet, and mobile:
+  - Card grid reflows (2 → 3 → 4 columns as viewport grows).
+  - Filters collapse into a drawer/sheet on mobile; sort row stays usable.
+  - Gallery stacks above details on mobile; tables scroll horizontally or
+    collapse to cards; admin sidebar becomes an overlay drawer.
+  - Touch targets ≥ 40px for primary actions; no horizontal page overflow.
+- Verify at 360px, 768px, 1024px, and 1440px widths before sign-off.
+
+--------------------------------------------------------------------------------
+15. VALIDATION REQUIREMENTS
+--------------------------------------------------------------------------------
+- Shared Zod (or equivalent) schemas for category, product, inquiry, and
+  image metadata, used by BOTH client (fast feedback) and server (authority).
+- Key rules: name 2–200 chars; slug lowercase-hyphenated; referenceCode
+  2–50 chars [A-Za-z0-9._-]; shortDescription ≤300; description ≤10000;
+  specs ≤50 {key≤80, value≤300} entries; datasheet must be a valid URL;
+  availability/condition enums; phone 7–15 digits with + - spaces () .;
+  email valid; inquiry message 10–5000 chars.
+- Data accuracy rules (content, not just shape): do NOT invent prices,
+  specifications, manufacturer relationships, certifications, authorized
+  distributor claims, availability guarantees, warranty terms, or client
+  relationships. Placeholder/sample content must be CLEARLY marked as sample
+  during development and replaced with CLM-approved content before launch.
+
+--------------------------------------------------------------------------------
+16. SECURITY CONSIDERATIONS
+--------------------------------------------------------------------------------
+- Server-side authz on all admin entry points; no admin data in public APIs.
+- File upload hardening: type + size + filename sanitization; randomized
+  storage paths; no SVG/HTML uploads rendered inline; serve user files with
+  safe content-disposition where applicable.
+- SQL injection: use the ORM's parameterized queries exclusively.
+- XSS: escape/render user content as text; JSON-LD built from trusted fields.
+- CSRF: rely on the framework's server-action protections / same-origin
+  checks; state-changing admin endpoints require POST + session.
+- Rate-limit public inquiry + login endpoints; cap upload sizes and counts.
+- Secrets (DB URLs, service keys) in environment variables only; never in
+  client bundles or the repo.
+
+--------------------------------------------------------------------------------
+17. SUGGESTED FOLDER STRUCTURE
+--------------------------------------------------------------------------------
+(Adapt to the target project's existing conventions; the principle is:
+public catalog, admin dashboard, shared components/lib, and actions grouped
+by domain. NOTHING is shared with another business's code.)
+
+  app/(storefront)/            public layout (header/footer) + catalog pages
+    page.tsx                   catalog home (listing + filters)
+    catalog/[slug]/page.tsx    product detail + inquiry CTA
+    categories/[slug]/page.tsx category browsing (optional if query-based)
+    about/page.tsx             company profile + services + board repair
+    contact/page.tsx           info + map + general inquiry form
+  app/(dashboard)/admin/       protected admin (own layout + auth check)
+    page.tsx                   overview (counts, recent products/inquiries)
+    products/page.tsx          admin product table + search/filters
+    products/new/page.tsx      create form
+    products/[id]/edit/page.tsx edit form + image management
+    categories/page.tsx        category CRUD
+    inquiries/page.tsx         inquiry inbox + status updates
+  app/actions/                 server mutations
+    products.ts  categories.ts  inquiries.ts  (public submit + admin status)
+  components/
+    catalog/                   product-card, category-nav, filters,
+                               product-gallery, inquiry-form/panel,
+                               related-products, empty-state
+    dashboard/                 admin-shell/sidebar/header, product-form,
+                               products-table, category-form, inquiries-table
+    ui/                        button/input/textarea/select/badge/card/table…
+  lib/
+    db.ts                      ORM client singleton
+    auth.ts / authz.ts         session + requireAdmin helpers
+    validators.ts              Zod schemas (NO price fields)
+    storage.ts                 upload/public-url/delete helpers
+    catalog.ts                 constants (5 categories), labels, slugify
+  prisma/
+    schema.prisma              §3 models
+    seed.ts                    5 categories + sample products (marked SAMPLE)
+    migrations/                one migration for the catalog tables
+
+--------------------------------------------------------------------------------
+18. IMPLEMENTATION PHASES
+--------------------------------------------------------------------------------
+Phase 0 — Inspect target project: stack, auth, DB, storage, UI kit, routing
+  conventions. Decide what to reuse vs. create. Output: short plan.
+Phase 1 — Data layer: schema models (§3) + migration + seed (5 categories,
+  3–10 clearly-marked SAMPLE products with images/placeholders). Verify with
+  ORM Studio/CLI that tables + relations work.
+Phase 2 — Admin core: auth guard, product CRUD + publish toggle + soft
+  delete/restore, image upload/manage, category CRUD. Verify each mutation
+  end-to-end (DB row + stored file + toast + revalidation).
+Phase 3 — Public catalog: listing grid + category nav + search/filters/sort
+  + pagination + detail page + gallery + specs + datasheet link + related
+  products + empty/404 states. Verify all routes at mobile + desktop widths.
+Phase 4 — Inquiries: product + general forms (public, rate-limited),
+  admin inbox + status flow, CTA wiring from detail pages. Send a test
+  inquiry per form and resolve it in the inbox.
+Phase 5 — Company pages + SEO: about/services/contact, metadata/OpenGraph/
+  canonical/JSON-LD (no offers/price), sitemap/robots. Replace or remove ALL
+  sample content with CLM-approved copy before launch.
+Phase 6 — Hardening + acceptance: run §19 checklist, responsive pass (§14),
+  validation/security review (§15–§16), remove dev placeholders, final demo.
+
+--------------------------------------------------------------------------------
+19. ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+The build is DONE only when ALL of the following are verified:
+ [ ] Five categories exist, are browsable, and filter the listing correctly.
+ [ ] Products list with image, name, category, short description,
+     model/part number (when set), availability badge — and NO price anywhere.
+ [ ] Product detail shows gallery, full description, specs, manufacturer,
+     model/part number, availability, datasheet link (when set), and an
+     inquiry CTA. No price, cart, or checkout element on the page.
+ [ ] Admin can add, edit, soft-delete/restore, publish/unpublish products;
+     upload/set-primary/delete images (≤10, ≤5MB, allowed types);
+     assign categories; edit specs/manufacturer/model/part/availability.
+ [ ] Admin can create/edit/deactivate categories; guarded delete works.
+ [ ] Search finds products by name, reference code, model, part number,
+     manufacturer; filters + sort + pagination compose correctly.
+ [ ] Inquiry forms (product + general) submit, validate, and appear in the
+     admin inbox; status flow NEW → CONTACTED → COMPLETED works.
+ [ ] Responsive at 360/768/1024/1440px for listing, detail, and dashboard.
+ [ ] No draft/unpublished/soft-deleted product is reachable publicly.
+ [ ] No console-breaking errors; mutations show toasts; pages revalidate.
+ [ ] Sample/placeholder content is either replaced with CLM-approved copy or
+     explicitly signed off as demo-only. Company contact details (§1) are
+     correct wherever displayed.
+ [ ] Full-text grep for price/currency/cart/checkout/payment terms returns
+     ZERO hits in catalog code, UI strings, APIs, and metadata (see §20).
+
+--------------------------------------------------------------------------------
+20. EXPLICITLY FORBIDDEN — DO NOT IMPLEMENT
+--------------------------------------------------------------------------------
+The following are OUT OF SCOPE and must NOT appear in code, UI, API, or docs:
+
+  1. Product price, sale price, discount price, or "Price on Request" widgets.
+  2. Currency codes/symbols, exchange rates, or price formatting helpers.
+  3. Price sorting, price filtering, or price-range sliders.
+  4. Shopping cart (add-to-cart, cart page, cart state, cart badges).
+  5. Checkout flow (any step of it: shipping, billing, order review, place
+     order).
+  6. Payment integration (gateways, SDKs, webhooks, test keys, "pay now").
+  7. Order management / order history / invoices / receipts.
+  8. Coupons, discounts, vouchers, loyalty points.
+  9. Ecommerce structured data (schema.org Offer/AggregateOffer with prices).
+ 10. Any public API field that could carry pricing (do not add one "just in
+     case" — the schema has no such column by design).
+ 11. Copying another business's branding, company name, product data, contact
+     details, or business rules into the CLM project.
+ 12. Fabricated specifications, certifications, distributor claims, warranties,
+     availability guarantees, or client relationships.
+ 13. Destructive database commands against real data; production config
+     changes without explicit approval.
+
+Verification command (run before sign-off; expect no matches in catalog,
+admin, actions, components, lib, or public metadata):
+
+  grep -riE "price|currency|₱|PHP|USD|\bcart\b|checkout|payment|stripe|paypal|order total|discount|sale price" \
+    app components lib prisma public --include="*.ts" --include="*.tsx" \
+    | grep -viE "priceless" || echo "CLEAN: no commerce terms found"
+
+(Note: the word "price" may legitimately appear ONLY inside this spec file
+and inside comments that say "no price" — never in shipped code or UI.)
+
+================================================================================
+END OF SPECIFICATION — build the CLM catalog as a separate, independent
+project following sections 1–20 above.
+================================================================================

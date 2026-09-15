@@ -1,36 +1,23 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# CLM Catalog — standalone app (excluded from the parent profile-site workspace)
+node_modules/
+.next/
+out/
+dist/
+build/
 
-# next.js
-/.next/
-/out/
+# Prisma
+prisma/*.db
+prisma/*.db-journal
 
-# production
-/build
+# Env (never commit real keys)
+.env
+.env*.local
 
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Logs / OS
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
 
-# env
-.env*
-!.env.example
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Uploads scratch (production uses Supabase Storage)
+public/uploads/

@@ -1,34 +1,43 @@
-# CLM Electronics Engineering Services — Company Profile Website
+# CLM Catalog — B2B Product Catalog + Admin Dashboard
 
-Next.js 14 + TypeScript + Tailwind CSS 3.
+Standalone Next.js 16 app for **CLM Electronics Engineering Services**. Information and
+inquiry only — **no prices, no cart, no checkout, no payments, anywhere.**
 
-## Develop
-
-```bash
-npm install
-npm run dev
-```
-
-## Build
+## Quick start (after Supabase is connected — see SUPABASE_SETUP.md)
 
 ```bash
-npm run build
-npm start
+pnpm install
+pnpm build
+pnpm start
+# dev:
+pnpm dev
 ```
 
-## Content
+## Content & data
 
-- `src/data/company.ts` — company info, contact, nav
-- `src/data/services.ts` — service categories
-- `src/data/equipment.ts` — equipment expertise + parts sourcing
-- `src/data/board-repair.ts` — board repair records (`station`, `model`, `boardDescription`, `image`, `problem`, `repairRate`)
-- `src/data/legal.ts` — business registration / permit documents shown in the About page gallery
+- `prisma/schema.prisma` — Category, Product, ProductImage, Inquiry, User. No monetary columns by design.
+- `prisma/migrations/0001_init/migration.sql` — initial migration (apply with `prisma migrate deploy`).
+- `prisma/seed.ts` — upserts the 5 fixed categories + ADMIN user + `[SAMPLE]` demo products.
+- `lib/catalog.ts` — fixed categories, availability/condition labels, limits.
 
-To add a board repair record, append an object to `boardRepairRecords`. Filters, summary
-statistics, desktop table, and mobile cards update automatically.
+## Key routes
 
-## Images
+| Route | Surface |
+|---|---|
+| `/` | Homepage = products listing (search, category pills, filters, sort, pagination) |
+| `/products/[slug]` | Product detail + gallery + specs + inquiry form + related |
+| `/categories`, `/categories/[slug]` | Category browsing |
+| `/about`, `/services`, `/contact` | Company pages (contact has the general inquiry form) |
+| `/login` | Admin sign-in (Supabase Auth, email/password) |
+| `/admin` | Dashboard (counts, recent products) |
+| `/admin/products`, `/new`, `/[id]/edit` | Product CRUD, publish toggle, soft delete/restore, images |
+| `/admin/categories` | Category CRUD (core slugs guarded) |
+| `/admin/inquiries` | Inquiry inbox, NEW → CONTACTED → COMPLETED |
 
-Place client-supplied board/equipment photos under `public/images/…` and set the record's
-`image` field to that path (e.g. `/images/boards/indelag-infosam3.jpg`). Records with
-`image: null` render a clean "Photo coming soon" placeholder.
+## Conventions
+
+- Public queries: only `published: true` + `deletedAt: null`. No exceptions.
+- All admin pages/actions go through `requireAdmin()` (Supabase session + Prisma role).
+- Images: JPEG/PNG/WebP/AVIF ≤ 5 MB, max 10/product, converted to WebP via sharp, stored in the `product-images` Supabase bucket.
+- Inquiry forms: honeypot + ≤5/min/IP rate limit.
+- Before launch: replace/remove ALL `[SAMPLE]` products with CLM-approved content.
