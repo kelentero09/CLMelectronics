@@ -4,7 +4,10 @@ import BoardRepairBrowser from "@/components/profile/board-repair-browser";
 import { boardRepairRecords, type BoardRepairRecord } from "@/data/board-repair";
 import { boardRepairDelegate } from "@/lib/board-repairs";
 
-export const dynamic = "force-dynamic";
+// Cached with ISR: admin create/update/delete actions call
+// revalidatePath("/board-repair"), so edits appear immediately while repeat
+// visits are served instantly without a live database roundtrip.
+export const revalidate = 300;
 
 export const metadata = {
   title: "Board Repair Capability",
