@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div>
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.webp"
+              src="/logo3.jpg"
               alt="CLM Electronics logo"
               width={40}
               height={40}
@@ -36,11 +36,13 @@ export function SiteFooter() {
         <nav aria-label="Footer">
           <h2 className="text-sm font-bold uppercase tracking-wider text-white">Catalog</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link href="/" className="hover:text-white hover:underline">All Products</Link></li>
-            <li><Link href="/categories" className="hover:text-white hover:underline">Categories</Link></li>
+            <li><Link href="/" className="hover:text-white hover:underline">Home</Link></li>
             <li><Link href="/about" className="hover:text-white hover:underline">About CLM</Link></li>
+            <li><Link href="/services" className="hover:text-white hover:underline">Services</Link></li>
             <li><Link href="/equipment" className="hover:text-white hover:underline">Equipment Expertise</Link></li>
             <li><Link href="/board-repair" className="hover:text-white hover:underline">Board Repair</Link></li>
+            <li><Link href="/products" className="hover:text-white hover:underline">All Products</Link></li>
+            <li><Link href="/categories" className="hover:text-white hover:underline">Categories</Link></li>
             <li><Link href="/contact" className="hover:text-white hover:underline">Contact</Link></li>
             <li><Link href="/admin" className="hover:text-white hover:underline">Admin</Link></li>
           </ul>

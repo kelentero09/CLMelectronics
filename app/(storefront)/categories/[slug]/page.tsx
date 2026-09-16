@@ -54,7 +54,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <nav aria-label="Breadcrumb" className="text-xs text-slate-500">
-        <Link href="/" className="hover:underline">Catalog</Link>
+        <Link href="/products" className="hover:underline">Catalog</Link>
         {" / "}
         <Link href="/categories" className="hover:underline">Categories</Link>
         {" / "}

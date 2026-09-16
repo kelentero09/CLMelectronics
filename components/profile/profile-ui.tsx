@@ -4,15 +4,17 @@ export function ProfileSectionHeader({
   eyebrow,
   title,
   description,
+  eyebrowClassName = "text-xs font-bold uppercase tracking-[0.2em] text-steel-600",
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  eyebrowClassName?: string;
 }) {
   return (
     <div className="max-w-3xl">
       {eyebrow && (
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-steel-600">{eyebrow}</p>
+        <p className={eyebrowClassName}>{eyebrow}</p>
       )}
       <h2 className="mt-2 text-2xl font-bold text-navy-900 sm:text-3xl">{title}</h2>
       {description && <p className="mt-3 leading-relaxed text-slate-600">{description}</p>}

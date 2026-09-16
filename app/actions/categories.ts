@@ -31,6 +31,7 @@ export async function createCategory(form: FormData): Promise<ActionResult> {
     if (!parsed.success) return { ok: false, error: firstIssueMessage(parsed.error) };
     const category = await prisma.category.create({ data: parsed.data });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath("/admin/categories");
     return { ok: true, id: category.id };
   } catch (e) {
@@ -54,6 +55,7 @@ export async function updateCategory(id: string, form: FormData): Promise<Action
     }
     await prisma.category.update({ where: { id }, data: parsed.data });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath("/admin/categories");
     return { ok: true, id };
   } catch (e) {
@@ -66,6 +68,7 @@ export async function toggleCategoryActive(id: string, isActive: boolean): Promi
     await requireAdmin();
     await prisma.category.update({ where: { id }, data: { isActive } });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath("/admin/categories");
     return { ok: true, id };
   } catch (e) {
@@ -85,6 +88,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     }
     await prisma.category.delete({ where: { id } });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath("/admin/categories");
     return { ok: true, id };
   } catch (e) {

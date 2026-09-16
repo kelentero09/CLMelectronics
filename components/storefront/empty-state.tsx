@@ -21,7 +21,7 @@ export function EmptyState({
         <p className="text-2xl font-bold uppercase tracking-tight">{title}</p>
         <p className="mx-auto max-w-md text-sm text-slate-500">{text}</p>
         <div className="flex justify-center gap-2">
-          <Link href="/" className={buttonVariants()}>
+          <Link href="/products" className={buttonVariants()}>
             Browse All Products
           </Link>
           {showContact && (

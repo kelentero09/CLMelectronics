@@ -82,6 +82,8 @@ export async function createProduct(form: FormData): Promise<ActionResult> {
     }
 
     revalidatePath("/");
+    revalidatePath("/products");
+    revalidatePath("/products");
     revalidatePath("/admin/products");
     return { ok: true, id: product.id, slug: product.slug };
   } catch (e) {
@@ -127,6 +129,7 @@ export async function updateProduct(id: string, form: FormData): Promise<ActionR
     }
 
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath(`/products/${product.slug}`);
     revalidatePath("/admin/products");
     return { ok: true, id: product.id, slug: product.slug };
@@ -144,6 +147,7 @@ export async function togglePublish(id: string, published: boolean): Promise<Act
       select: { id: true, slug: true },
     });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath(`/products/${product.slug}`);
     revalidatePath("/admin/products");
     return { ok: true, id: product.id };
@@ -161,6 +165,7 @@ export async function softDeleteProduct(id: string): Promise<ActionResult> {
       select: { id: true, slug: true },
     });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath(`/products/${product.slug}`);
     revalidatePath("/admin/products");
     return { ok: true, id: product.id };
@@ -174,6 +179,7 @@ export async function restoreProduct(id: string): Promise<ActionResult> {
     await requireAdmin();
     await prisma.product.update({ where: { id }, data: { deletedAt: null } });
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath("/admin/products");
     return { ok: true, id };
   } catch (e) {
@@ -210,6 +216,7 @@ export async function deleteImage(imageId: string): Promise<ActionResult> {
     }
 
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath(`/products/${image.product.slug}`);
     revalidatePath("/admin/products");
     return { ok: true };
@@ -233,6 +240,7 @@ export async function setPrimaryImage(imageId: string): Promise<ActionResult> {
     ]);
 
     revalidatePath("/");
+    revalidatePath("/products");
     revalidatePath(`/products/${image.product.slug}`);
     revalidatePath("/admin/products");
     return { ok: true };

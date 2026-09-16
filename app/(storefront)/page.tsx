@@ -1,332 +1,426 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Search, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowRight,
+  Award,
+  CalendarCheck,
+  CircuitBoard,
+  Cog,
+  Factory,
+  GraduationCap,
+  Headphones,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  ShieldCheck,
+  Wrench,
+} from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { PAGE_SIZE } from "@/lib/catalog";
+import { company } from "@/data/company";
+import { equipmentGroups } from "@/data/equipment";
 import { ProductCard } from "@/components/storefront/product-card";
-import { CategoryTabs } from "@/components/storefront/category-tabs";
-import { EmptyState } from "@/components/storefront/empty-state";
-import { Input } from "@/components/ui/form";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { ProfileSectionHeader } from "@/components/profile/profile-ui";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Product Catalog",
+  title: "CLM Electronics Engineering Services | Semiconductor & Manufacturing Solutions",
   description:
-    "Browse CLM Electronics Engineering Services products: equipment, spare parts, manufacturing consumables, ESD materials, and office supplies. Information and inquiry only.",
+    "CLM Electronics Engineering Services provides technical support, equipment services, maintenance, repair, spare parts sourcing, and engineering solutions for semiconductor and manufacturing industries.",
 };
 
-type SearchParams = {
-  q?: string;
-  category?: string;
-  manufacturer?: string;
-  condition?: string;
-  availability?: string;
-  page?: string;
-};
-
-function buildLink(base: Record<string, string>, overrides: Record<string, string | undefined>) {
-  const params = new URLSearchParams();
-  const merged = { ...base, ...overrides };
-  for (const [k, v] of Object.entries(merged)) {
-    if (v) params.set(k, v);
-  }
-  const s = params.toString();
-  return s ? `/?${s}` : "/";
-}
-
-type CatalogProduct = Prisma.ProductGetPayload<{
+type FeaturedProduct = Prisma.ProductGetPayload<{
   include: { category: { select: { name: true } }; images: true };
 }>;
 
-type CategoryWithCount = {
-  id: string;
-  name: string;
-  slug: string;
-  _count: { products: number };
-};
+const capabilityCards = [
+  {
+    icon: Wrench,
+    title: "Technical Support",
+    text: "Technical assessment, minor and major repair, and responsive technical support.",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Preventive & Predictive Maintenance",
+    text: "Scheduled maintenance programs and equipment support that sustain machine condition.",
+  },
+  {
+    icon: Cog,
+    title: "Equipment Support",
+    text: "Technical services for semiconductor manufacturing equipment and sub-assemblies.",
+  },
+  {
+    icon: Package,
+    title: "Parts & Components",
+    text: "Machine spare parts sourcing and installation according to customer requirements.",
+  },
+  {
+    icon: CircuitBoard,
+    title: "Board Repair",
+    text: "Repair support for various electronic and equipment control boards.",
+  },
+  {
+    icon: GraduationCap,
+    title: "Technical Training",
+    text: "Machine operation, setup, maintenance, calibration, and technical training.",
+  },
+];
 
-const CONDITIONS = ["NEW", "USED", "REFURBISHED", "SURPLUS", "FOR_PARTS"];
-const AVAILABILITIES = ["IN_STOCK", "LOW_STOCK", "RESERVED", "SOLD", "UNAVAILABLE"];
+const boardTypes = [
+  "Main boards",
+  "Driver boards",
+  "Power supplies",
+  "CPU boards",
+  "Logic boards",
+  "Servo / driver boards",
+];
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const sp = await searchParams;
-  const q = sp.q?.trim() ?? "";
-  const categoryParam = sp.category ?? "";
-  const manufacturerParam = sp.manufacturer ?? "";
-  const condition = sp.condition ?? "";
-  const availability = sp.availability ?? "";
-  const page = Math.max(1, Number(sp.page || 1) || 1);
-  const skip = (page - 1) * PAGE_SIZE;
+const whyClm = [
+  {
+    icon: ShieldCheck,
+    title: "Quality Service",
+    text: "Focus on quality products, support, and services in every engagement.",
+  },
+  {
+    icon: Headphones,
+    title: "Reliable Technical Support",
+    text: "Responsive technical assistance and equipment support when it matters.",
+  },
+  {
+    icon: Award,
+    title: "After-Sales Support",
+    text: "Continued, accountable support after service and installation.",
+  },
+  {
+    icon: Factory,
+    title: "Industry-Focused Expertise",
+    text: "Experience focused on semiconductor and manufacturing equipment.",
+  },
+];
 
-  const where: Record<string, unknown> = { published: true, deletedAt: null };
-  if (condition) where.condition = condition;
-  if (availability) where.availability = availability;
-  if (manufacturerParam) where.manufacturer = manufacturerParam;
-  if (q) {
-    where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { referenceCode: { contains: q, mode: "insensitive" } },
-      { model: { contains: q, mode: "insensitive" } },
-      { partNumber: { contains: q, mode: "insensitive" } },
-      { manufacturer: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
-    ];
-  }
+const profilePoints = [
+  "Established January 10, 2023",
+  "Semiconductor and manufacturing focus",
+  "Technical and engineering services",
+  "Quality and reliable service",
+  "Long-term customer relationships",
+  "Accountable after-sales support",
+];
 
-  const orderBy: Record<string, string> = { createdAt: "desc" };
-
-  let products: CatalogProduct[] = [];
-  let total = 0;
-  let categories: CategoryWithCount[] = [];
-  let manufacturers: string[] = [];
-  let dbOnline = true;
-  let categoryMissing = false;
-
-  if (categoryParam) {
-    try {
-      const cat = await prisma.category.findFirst({
-        where: { OR: [{ slug: categoryParam }, { id: categoryParam }] },
-        select: { id: true },
-      });
-      if (!cat) {
-        categoryMissing = true;
-      } else {
-        (where as Record<string, unknown>).categoryId = cat.id;
-      }
-    } catch (e) {
-      console.error("Category lookup failed", e);
-      dbOnline = false;
-    }
-  }
-
-  if (categoryMissing) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <EmptyState title="Category not found" text="The category you are looking for does not exist." />
-      </div>
-    );
-  }
-
+export default async function CompanyProfileHomePage() {
+  let featured: FeaturedProduct[] = [];
   try {
-    const [p, t, cats, mfgs] = await Promise.all([
-      prisma.product.findMany({
-        where: where as never,
-        include: {
-          category: { select: { name: true } },
-          images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
-        },
-        orderBy: orderBy as never,
-        skip,
-        take: PAGE_SIZE,
-      }),
-      prisma.product.count({ where: where as never }),
-      prisma.category.findMany({
-        where: { isActive: true },
-        select: { id: true, name: true, slug: true, _count: { select: { products: { where: { published: true, deletedAt: null } } } } },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      }),
-      prisma.product.findMany({
-        where: { published: true, deletedAt: null, manufacturer: { not: null } },
-        select: { manufacturer: true },
-        distinct: ["manufacturer"],
-        orderBy: { manufacturer: "asc" },
-        take: 100,
-      }),
-    ]);
-    products = p;
-    total = t;
-    categories = cats.map((c) => ({ id: c.id, name: c.name, slug: c.slug, _count: { products: c._count.products } }));
-    manufacturers = mfgs.map((m) => m.manufacturer).filter((m): m is string => !!m);
+    featured = await prisma.product.findMany({
+      where: { published: true, deletedAt: null },
+      include: {
+        category: { select: { name: true } },
+        images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1 },
+      },
+      orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+      take: 4,
+    });
   } catch (e) {
-    console.error("Catalog query failed", e);
-    dbOnline = false;
+    console.error("Homepage featured products query failed", e);
   }
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const base: Record<string, string> = {};
-  if (q) base.q = q;
-  if (categoryParam) base.category = categoryParam;
-  if (manufacturerParam) base.manufacturer = manufacturerParam;
-  if (condition) base.condition = condition;
-  if (availability) base.availability = availability;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold uppercase tracking-tight text-navy-900 sm:text-3xl">
-          Products{" "}
-          {total > 0 && (
-            <span className="ml-2 rounded-full bg-navy-900/10 px-2.5 py-0.5 align-middle text-xs font-bold text-navy-900">
-              {total}
-            </span>
-          )}
-        </h1>
-        {q && (
-          <p className="text-sm text-slate-500">
-            Results for <span className="font-semibold text-navy-900">“{q}”</span>
-          </p>
-        )}
-      </div>
-
-      {/* Category tabs — single scrollable line with side arrows */}
-      <CategoryTabs
-        links={[
-          {
-            key: "all",
-            label: "All",
-            href: buildLink(base, { category: undefined, page: undefined }),
-            active: !categoryParam,
-          },
-          ...categories.map((c) => ({
-            key: c.id,
-            label: c.name,
-            href: buildLink(base, { category: c.slug, page: undefined }),
-            active: categoryParam === c.slug,
-            count: c._count.products,
-          })),
-        ]}
-      />
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
-        {/* Sidebar filters (desktop) */}
-        <aside className="hidden self-start lg:sticky lg:top-[76px] lg:block">
-          <FilterPanel
-            base={base}
-            manufacturerParam={manufacturerParam}
-            manufacturers={manufacturers}
-            condition={condition}
-            availability={availability}
-          />
-        </aside>
-
-        <div className="min-w-0 space-y-4">
-          {/* Single horizontal line: filter (leftmost) + search bar */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Filter leftmost (mobile only, desktop uses sidebar) */}
-            <details className="relative shrink-0 lg:hidden">
-              <summary
-                aria-label="Toggle filters"
-                className="relative flex cursor-pointer list-none items-center rounded border border-slate-300 bg-white p-2.5 text-navy-900 hover:border-navy-900 [&::-webkit-details-marker]:hidden"
+    <div className="overflow-x-clip">
+      {/* 1. HERO */}
+      <section className="blueprint-grid bg-navy-950" aria-label="CLM introduction">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_auto] lg:gap-14 lg:py-28">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent-400 sm:text-sm">
+              Established January 10, 2023 · Muntinlupa City
+            </p>
+            <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+              CLM Electronics Engineering Services
+            </h1>
+            <p className="mt-4 text-lg font-semibold text-slate-200 sm:text-2xl">
+              Technical Solutions for Semiconductor &amp; Manufacturing Industries
+            </p>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+              {company.description}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/services" className={cn(buttonVariants({ size: "lg" }), "bg-steel-500 hover:bg-steel-600")}>
+                Explore Our Services <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link
+                href="/contact"
+                className={cn(buttonVariants({ size: "lg", variant: "outline" }), "border-white/40 bg-white/10 text-white hover:bg-white hover:text-navy-900")}
               >
-                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-                {(manufacturerParam || condition || availability) && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-navy-900 px-1 text-[11px] font-bold text-white">
-                    {[manufacturerParam, condition, availability].filter(Boolean).length}
-                  </span>
-                )}
-              </summary>
-              <div className="absolute left-0 top-full z-30 mt-2 w-[280px] max-w-[80vw] shadow-lg">
-                <FilterPanel
-                  base={base}
-                  manufacturerParam={manufacturerParam}
-                  manufacturers={manufacturers}
-                  condition={condition}
-                  availability={availability}
-                />
-              </div>
-            </details>
-            <form action="/" method="get" className="flex min-w-0 flex-1 gap-1.5 sm:gap-2" role="search">
-              {categoryParam && <input type="hidden" name="category" value={categoryParam} />}
-              {manufacturerParam && <input type="hidden" name="manufacturer" value={manufacturerParam} />}
-              {condition && <input type="hidden" name="condition" value={condition} />}
-              {availability && <input type="hidden" name="availability" value={availability} />}
-              <Input name="q" defaultValue={q} placeholder="Search products…" aria-label="Search products" className="min-w-0 flex-1" />
-              <Button type="submit" aria-label="Search" className="shrink-0 px-3 sm:px-4">
-                <Search className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Search</span>
-              </Button>
-            </form>
+                Contact CLM
+              </Link>
+            </div>
           </div>
+          <div className="mx-auto w-full max-w-xs shrink-0 sm:max-w-sm lg:mx-0 lg:max-w-md">
+            <Image
+              src="/hero.jpg"
+              alt="Semiconductor engineer operating wire bonding equipment"
+              width={480}
+              height={480}
+              className="h-auto w-full rounded-xl border border-white/10 object-contain shadow-2xl"
+              priority
+            />
+          </div>
+        </div>
+      </section>
 
-          {!dbOnline ? (
-            <EmptyState
-              title="Catalog unavailable"
-              text="The product database is not connected yet. Please check back later or contact CLM directly."
+      {/* 2. COMPANY PROFILE */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Company profile">
+        <div className="grid items-center gap-8 lg:grid-cols-2">
+          <div className="min-w-0">
+            <ProfileSectionHeader
+              eyebrow="Company Profile"
+              eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+              title="Who CLM Is"
+              description="CLM Electronics Engineering Services was established on January 10, 2023 to provide services and solutions for semiconductor and manufacturing industries. CLM builds long-term, trusted business relationships with customers through responsive, quality, and reliable technical services."
             />
-          ) : products.length === 0 ? (
-            <EmptyState
-              title={q ? "No matches found" : "No products yet"}
-              text="Try clearing filters or searching a different reference code, model, or part number."
+            <ul className="mt-6 grid gap-2 sm:grid-cols-2" aria-label="Company highlights">
+              {profilePoints.map((point) => (
+                <li
+                  key={point}
+                  className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-navy-900"
+                >
+                  <span aria-hidden="true" className="mt-0.5 font-bold text-steel-600">✓</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <Link href="/about" className="mt-5 inline-block text-sm font-semibold text-steel-600 hover:underline">
+              Learn more about CLM →
+            </Link>
+          </div>
+          <div className="mx-auto w-full max-w-md min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-navy-950 shadow-sm lg:justify-self-end">
+            <Image
+              src="/who-clm.jpg"
+              alt="CLM engineer performing board-level technical work"
+              width={880}
+              height={880}
+              className="h-auto w-full object-contain"
+              loading="lazy"
             />
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-3">
-              {products.map((p) => (
+            <div className="border-t border-white/10 px-5 py-4">
+              <p className="text-sm font-bold text-white">{company.name}</p>
+              <p className="mt-1 text-sm text-slate-300">{company.address}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. MISSION & VISION */}
+      <section className="border-y border-slate-200 bg-slate-50" aria-label="Mission and vision">
+        <div className="mx-auto grid max-w-7xl gap-5 px-4 py-10 sm:px-6 md:grid-cols-2">
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <p className="text-xl font-bold uppercase tracking-[0.15em] text-steel-600 sm:text-2xl">Mission</p>
+            <p className="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">
+              To establish total customer satisfaction through quality products, support, and services
+              by providing the best and most effective quality solutions and accountable
+              after-sales/service support.
+            </p>
+          </article>
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <p className="text-xl font-bold uppercase tracking-[0.15em] text-steel-600 sm:text-2xl">Vision</p>
+            <p className="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">
+              We envision being one of the best suppliers in terms of sales and technical support
+              services, known for quality and timely services.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      {/* 4. WHAT CLM DOES */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="What CLM does">
+        <ProfileSectionHeader
+          eyebrow="Capabilities"
+          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+          title="What CLM Does"
+          description="A high-level overview of CLM's capabilities. See the Services page for full details."
+        />
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {capabilityCards.map((c) => (
+            <article
+              key={c.title}
+              className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-navy-900 text-white">
+                <c.icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <h3 className="mt-4 font-bold text-navy-900">{c.title}</h3>
+              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-slate-600">{c.text}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <Link href="/services" className={buttonVariants({ size: "lg" })}>
+            View All Services <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </section>
+
+      {/* 5. EQUIPMENT EXPERTISE */}
+      <section className="blueprint-grid bg-navy-950" aria-label="Equipment expertise">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent-400 sm:text-base">Equipment</p>
+          <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Semiconductor Equipment Expertise</h2>
+          <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
+            CLM services semiconductor manufacturing equipment across these major categories.
+            Detailed machine models remain on the Equipment page.
+          </p>
+          <ul className="mt-6 flex flex-wrap gap-2" aria-label="Equipment categories">
+            {equipmentGroups.map((g) => (
+              <li
+                key={g.id}
+                className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white"
+              >
+                {g.brand}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/equipment"
+            className={cn(buttonVariants({ size: "lg" }), "mt-8 bg-steel-500 hover:bg-steel-600")}
+          >
+            Explore Equipment <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </section>
+
+      {/* 6. BOARD REPAIR SUMMARY */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Board repair services">
+        <div className="grid items-center gap-8 lg:grid-cols-2">
+          <div className="min-w-0">
+            <ProfileSectionHeader
+              eyebrow="Board repair"
+              eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+              title="Board Repair Services"
+              description="CLM provides board repair capabilities for equipment-related electronic boards, based on technical capability and available resources."
+            />
+            <ul className="mt-5 grid grid-cols-2 gap-2" aria-label="Supported board types">
+              {boardTypes.map((b) => (
+                <li key={b} className="flex items-center gap-2 text-sm font-medium text-navy-900">
+                  <span aria-hidden="true" className="font-bold text-steel-600">✓</span> {b}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/board-repair"
+              className={cn(buttonVariants({ variant: "outline" }), "mt-6")}
+            >
+              View Board Repair Capabilities <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="flex min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-10">
+            <CircuitBoard className="h-24 w-24 text-navy-900" strokeWidth={1.25} aria-hidden="true" />
+          </div>
+        </div>
+      </section>
+
+      {/* 7. PRODUCTS SUMMARY */}
+      <section className="border-y border-slate-200 bg-slate-50" aria-label="Products and technical solutions">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+          <ProfileSectionHeader
+            eyebrow="Products"
+            eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+            title="Products & Technical Solutions"
+            description="A small selection from the CLM catalog — equipment, spare parts, and technical items. Information and inquiry only."
+          />
+          {featured.length > 0 ? (
+            <div className="mt-8 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+              {featured.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
+          ) : (
+            <p className="mt-6 rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">
+              Product highlights are currently unavailable. Browse the full catalog for equipment,
+              spare parts, consumables, and materials.
+            </p>
           )}
+          <div className="mt-8 text-center">
+            <Link href="/products" className={buttonVariants({ size: "lg" })}>
+              View Products <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
-          {totalPages > 1 && (
-            <nav aria-label="Pagination" className="flex items-center justify-center gap-2 pt-4">
-              <Link
-                href={buildLink(base, { page: String(Math.max(1, page - 1)) })}
-                aria-disabled={page <= 1}
-                className={buttonVariants({ variant: "outline", size: "sm", className: page <= 1 ? "pointer-events-none opacity-50" : "" })}
-              >
-                Prev
-              </Link>
-              <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
-              <Link
-                href={buildLink(base, { page: String(Math.min(totalPages, page + 1)) })}
-                aria-disabled={page >= totalPages}
-                className={buttonVariants({ variant: "outline", size: "sm", className: page >= totalPages ? "pointer-events-none opacity-50" : "" })}
-              >
-                Next
-              </Link>
-            </nav>
-          )}
+      {/* 8. WHY CLM */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Why CLM">
+        <ProfileSectionHeader
+          eyebrow="Why CLM"
+          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+          title="A Dependable Engineering Partner"
+          description="What customers can expect when working with CLM Electronics Engineering Services."
+        />
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {whyClm.map((w) => (
+            <article key={w.title} className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-steel-500/10 text-steel-600">
+                <w.icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <h3 className="mt-4 font-bold text-navy-900">{w.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{w.text}</p>
+            </article>
+          ))}
         </div>
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function FilterPanel({
-  base,
-  manufacturerParam,
-  manufacturers,
-  condition,
-  availability,
-}: {
-  base: Record<string, string>;
-  manufacturerParam: string;
-  manufacturers: string[];
-  condition: string;
-  availability: string;
-}) {
-  return (
-    <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-navy-900">Manufacturer</p>
-        <div className="mt-1 max-h-40 space-y-1 overflow-y-auto pr-1">
-          <Link href={buildLink(base, { manufacturer: undefined, page: undefined })} className={cn("block rounded px-2 py-1 text-sm", !manufacturerParam ? "bg-slate-100 font-semibold" : "hover:bg-slate-50")}>All</Link>
-          {manufacturers.map((m) => (
-            <Link key={m} href={buildLink(base, { manufacturer: m, page: undefined })} className={cn("block truncate rounded px-2 py-1 text-sm", manufacturerParam === m ? "bg-navy-900 text-white" : "hover:bg-slate-50")}>{m}</Link>
-          ))}
+      {/* 9. CTA */}
+      <section className="blueprint-grid bg-navy-950" aria-label="Contact call to action">
+        <div className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6 sm:py-16">
+          <h2 className="mx-auto max-w-2xl text-2xl font-bold text-white sm:text-3xl">
+            Looking for Reliable Technical &amp; Engineering Support?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl leading-relaxed text-slate-300">
+            Tell us about your equipment or service need — CLM responds with quality, reliable
+            technical support and accountable after-sales service.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "bg-steel-500 hover:bg-steel-600")}>
+              Contact CLM <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/services"
+              className={cn(buttonVariants({ size: "lg", variant: "outline" }), "border-white/40 bg-white/10 text-white hover:bg-white hover:text-navy-900")}
+            >
+              Explore Our Services
+            </Link>
+          </div>
         </div>
-      </div>
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-navy-900">Condition</p>
-        <div className="mt-1 flex flex-wrap gap-1">
-          <Link href={buildLink(base, { condition: undefined, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", !condition ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
-          {CONDITIONS.map((c) => (
-            <Link key={c} href={buildLink(base, { condition: c, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", condition === c ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>{c}</Link>
-          ))}
+      </section>
+
+      {/* 10. CONTACT SUMMARY */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Company contact information">
+        <div className="grid gap-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-navy-900 sm:text-2xl">{company.name}</h2>
+            <ul className="mt-4 space-y-2.5 text-sm text-slate-600">
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
+                <span>{company.address}</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
+                <span>09979269559 · 88384882</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
+                <a href="mailto:er.canlas23@gmail.com" className="break-all underline hover:text-navy-900">
+                  er.canlas23@gmail.com
+                </a>
+              </li>
+            </ul>
+          </div>
+          <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "w-full lg:w-auto")}>
+            Get in Touch <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
-      </div>
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-navy-900">Availability</p>
-        <div className="mt-1 flex flex-wrap gap-1">
-          <Link href={buildLink(base, { availability: undefined, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", !availability ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
-          {AVAILABILITIES.map((a) => (
-            <Link key={a} href={buildLink(base, { availability: a, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", availability === a ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>{a.replace("_", " ")}</Link>
-          ))}
-        </div>
-      </div>
-      <Link href="/" className={buttonVariants({ variant: "outline", size: "sm", className: "w-full" })}>Clear all filters</Link>
+      </section>
     </div>
   );
 }

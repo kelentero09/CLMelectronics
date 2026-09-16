@@ -36,7 +36,7 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
       <aside className="hidden w-60 shrink-0 flex-col bg-navy-950 text-slate-200 md:flex" aria-label="Admin navigation">
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
           <Image
-            src="/logo.webp"
+            src="/logo3.jpg"
             alt="CLM Electronics logo"
             width={32}
             height={32}
@@ -70,7 +70,7 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
           <button type="button" onClick={signOut} className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm font-medium hover:bg-white/5">
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
-          <Link href="/" className="mt-1 block rounded px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-white">
+          <Link href="/products" className="mt-1 block rounded px-3 py-2 text-sm text-slate-400 hover:bg-white/5 hover:text-white">
             ← View Catalog
           </Link>
         </div>
@@ -79,7 +79,7 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
         <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-bold text-navy-900 md:hidden">
             <Image
-              src="/logo.webp"
+              src="/logo3.jpg"
               alt="CLM Electronics logo"
               width={28}
               height={28}

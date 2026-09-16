@@ -6,12 +6,13 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 
 const links = [
-  { label: "Products", href: "/" },
-  { label: "Categories", href: "/categories" },
+  { label: "Home", href: "/" },
   { label: "About", href: "/about" },
   { label: "Services", href: "/services" },
   { label: "Equipment", href: "/equipment" },
   { label: "Board Repair", href: "/board-repair" },
+  { label: "Products", href: "/products" },
+  { label: "Categories", href: "/categories" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -21,9 +22,9 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-navy-950/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-3" aria-label="CLM catalog home">
+        <Link href="/" className="flex items-center gap-3" aria-label="CLM home">
           <Image
-            src="/logo.webp"
+            src="/logo3.jpg"
             alt="CLM Electronics logo"
             width={40}
             height={40}

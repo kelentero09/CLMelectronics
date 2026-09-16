@@ -5,21 +5,21 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: {
-    default: "CLM Electronics Engineering Services | Product Catalog",
+    default: "CLM Electronics Engineering Services | Semiconductor & Manufacturing Solutions",
     template: "%s | CLM Electronics Engineering Services",
   },
   description:
-    "B2B product catalog for semiconductor and manufacturing equipment, spare parts, consumables, ESD materials, and office supplies. Information and inquiry only — contact CLM Electronics Engineering Services, Muntinlupa City, Philippines.",
+    "CLM Electronics Engineering Services provides technical support, equipment services, maintenance, repair, spare parts sourcing, and engineering solutions for semiconductor and manufacturing industries.",
   openGraph: {
-    title: "CLM Electronics Engineering Services | Product Catalog",
+    title: "CLM Electronics Engineering Services | Semiconductor & Manufacturing Solutions",
     description:
-      "Equipment, spare parts, consumables, and materials for semiconductor and manufacturing industries.",
+      "Technical support, equipment services, maintenance, repair, spare parts sourcing, and engineering solutions for semiconductor and manufacturing industries.",
     type: "website",
-    images: ["/logo.webp"],
+    images: ["/logo3.jpg"],
   },
   icons: {
-    icon: "/logo.webp",
-    apple: "/logo.webp",
+    icon: "/logo3.jpg",
+    apple: "/logo3.jpg",
   },
 };
 

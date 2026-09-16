@@ -51,7 +51,7 @@ function LoginForm() {
     <div className="mx-auto max-w-md px-4 py-14 sm:px-6">
       <div className="mb-4 flex justify-center">
         <Image
-          src="/logo.webp"
+          src="/logo3.jpg"
           alt="CLM Electronics logo"
           width={64}
           height={64}
