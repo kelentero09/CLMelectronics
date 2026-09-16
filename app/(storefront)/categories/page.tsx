@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
+import { Reveal } from "@/components/storefront/reveal";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +38,13 @@ export default async function CategoriesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <Reveal>
       <h1 className="text-2xl font-bold uppercase tracking-tight text-navy-900 sm:text-3xl">Categories</h1>
+      </Reveal>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((c) => (
-          <Link key={c.id} href={`/categories/${c.slug}`}>
+        {categories.map((c, i) => (
+          <Reveal key={c.id} delay={Math.min(i * 60, 300)} className="[&>*]:h-full">
+          <Link href={`/categories/${c.slug}`}>
             <Card className="h-full transition-shadow hover:shadow-md">
               <CardContent>
                 <h2 className="font-bold text-navy-900">{c.name}</h2>
@@ -49,8 +53,9 @@ export default async function CategoriesPage() {
                   {c._count.products} product{c._count.products === 1 ? "" : "s"} →
                 </p>
               </CardContent>
-            </Card>
-          </Link>
+              </Card>
+            </Link>
+          </Reveal>
         ))}
         {categories.length === 0 && (
           <p className="text-sm text-slate-500">Categories are not available yet.</p>

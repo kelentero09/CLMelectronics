@@ -6,6 +6,7 @@ import { PAGE_SIZE } from "@/lib/catalog";
 import { ProductCard } from "@/components/storefront/product-card";
 import { CategoryTabs } from "@/components/storefront/category-tabs";
 import { EmptyState } from "@/components/storefront/empty-state";
+import { Reveal } from "@/components/storefront/reveal";
 import { Input } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -253,8 +254,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             />
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-3">
-              {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
+              {products.map((p, i) => (
+                <Reveal key={p.id} delay={Math.min(i * 40, 200)} className="[&>*]:h-full">
+                  <ProductCard product={p} />
+                </Reveal>
               ))}
             </div>
           )}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { serviceCategories, wedgeBrands } from "@/data/services";
 import { ProfilePageHero } from "@/components/profile/profile-ui";
+import { Reveal } from "@/components/storefront/reveal";
 
 export const metadata = {
   title: "Services",
@@ -18,8 +19,8 @@ export default function ServicesPage() {
       />
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-12 sm:px-6">
         {serviceCategories.map((cat, i) => (
+          <Reveal key={cat.id}>
           <section
-            key={cat.id}
             id={cat.id}
             aria-label={cat.title}
             className={`rounded-lg border p-6 sm:p-8 ${i % 2 === 0 ? "border-slate-200 bg-white" : "border-navy-900/10 bg-slate-50"}`}
@@ -56,6 +57,7 @@ export default function ServicesPage() {
               </ul>
             </div>
           </section>
+          </Reveal>
         ))}
       </div>
     </>

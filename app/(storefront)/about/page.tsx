@@ -1,5 +1,6 @@
 import { company } from "@/data/company";
 import { ProfilePageHero, ProfileSectionHeader, ProfileCard } from "@/components/profile/profile-ui";
+import { Reveal } from "@/components/storefront/reveal";
 import LegalDocuments from "@/components/profile/legal-documents";
 
 export const metadata = {
@@ -17,6 +18,7 @@ export default function AboutPage() {
         description="A service-focused engineering provider for semiconductor and manufacturing equipment."
       />
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6" aria-label="Company overview">
+        <Reveal>
         <ProfileSectionHeader eyebrow="Company overview" title="Who We Are" />
         <p className="mt-4 max-w-3xl leading-relaxed text-slate-600">
           CLM Electronics Engineering Services was established on January 10, 2023 to provide
@@ -37,19 +39,26 @@ export default function AboutPage() {
             </div>
           ))}
         </dl>
+        </Reveal>
 
         <div className="mt-8 grid gap-5 md:grid-cols-2" aria-label="Mission and vision">
+          <Reveal className="h-full">
           <ProfileCard title="Our Mission">
             <p>{company.mission}</p>
           </ProfileCard>
+          </Reveal>
+          <Reveal delay={120} className="h-full">
           <ProfileCard title="Our Vision">
             <p>{company.vision}</p>
           </ProfileCard>
+          </Reveal>
         </div>
       </section>
       <div className="border-t border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <Reveal>
           <LegalDocuments />
+          </Reveal>
         </div>
       </div>
     </>

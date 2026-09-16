@@ -1,4 +1,5 @@
 import { InquiryForm } from "@/components/storefront/inquiry-form";
+import { Reveal } from "@/components/storefront/reveal";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +11,12 @@ export const metadata = {
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <Reveal>
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-steel-600">Contact</p>
       <h1 className="mt-2 text-3xl font-bold text-navy-900 sm:text-4xl">Contact CLM</h1>
+      </Reveal>
       <div className="mt-8 grid gap-8 lg:grid-cols-5">
-        <div className="space-y-5 lg:col-span-2">
+        <Reveal variant="left" className="space-y-5 lg:col-span-2">
           <div className="rounded-lg bg-navy-950 p-6 text-slate-200">
             <h2 className="font-bold text-white">CLM Electronics Engineering Services</h2>
             <dl className="mt-4 space-y-3 text-sm">
@@ -35,10 +38,10 @@ export default function ContactPage() {
               </div>
             </dl>
           </div>
-        </div>
-        <div className="lg:col-span-3">
+        </Reveal>
+        <Reveal variant="right" delay={120} className="lg:col-span-3">
           <InquiryForm />
-        </div>
+        </Reveal>
       </div>
     </div>
   );

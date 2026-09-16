@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ProductCard } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/storefront/empty-state";
+import { Reveal } from "@/components/storefront/reveal";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <Reveal>
       <nav aria-label="Breadcrumb" className="text-xs text-slate-500">
         <Link href="/products" className="hover:underline">Catalog</Link>
         {" / "}
@@ -63,14 +65,17 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
       <h1 className="mt-2 text-2xl font-bold uppercase tracking-tight text-navy-900 sm:text-3xl">{category.name}</h1>
       {category.description && <p className="mt-2 max-w-2xl text-sm text-slate-600">{category.description}</p>}
       <p className="mt-1 text-xs text-slate-500">{products.length} product{products.length === 1 ? "" : "s"}</p>
+      </Reveal>
       {products.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No products yet" text={`There are currently no published products in ${category.name}.`} />
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+          {products.map((p, i) => (
+            <Reveal key={p.id} delay={Math.min(i * 40, 200)} className="[&>*]:h-full">
+              <ProductCard product={p} />
+            </Reveal>
           ))}
         </div>
       )}

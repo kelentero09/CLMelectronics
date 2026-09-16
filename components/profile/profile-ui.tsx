@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Reveal } from "@/components/storefront/reveal";
 
 export function ProfileSectionHeader({
   eyebrow,
@@ -43,9 +44,11 @@ export function ProfilePageHero({
   return (
     <section className="blueprint-grid bg-navy-950" aria-label="Page introduction">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+        <Reveal>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">{eyebrow}</p>
         <h1 className="mt-2 max-w-3xl text-3xl font-bold text-white sm:text-4xl">{title}</h1>
         <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">{description}</p>
+        </Reveal>
       </div>
     </section>
   );

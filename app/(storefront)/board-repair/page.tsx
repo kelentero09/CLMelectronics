@@ -1,4 +1,5 @@
 import { ProfilePageHero } from "@/components/profile/profile-ui";
+import { Reveal } from "@/components/storefront/reveal";
 import BoardRepairBrowser from "@/components/profile/board-repair-browser";
 import { boardRepairRecords, type BoardRepairRecord } from "@/data/board-repair";
 import { boardRepairDelegate } from "@/lib/board-repairs";
@@ -44,7 +45,9 @@ export default async function BoardRepairPage() {
         title="Board Repair Capability"
         description="CLM Electronics Engineering Services provides board repair capabilities for semiconductor and manufacturing equipment. Our repair services cover a range of control, driver, power supply, interface, and electronic boards based on our technical capabilities and available resources."
       />
+      <Reveal>
       <BoardRepairBrowser records={records} />
+      </Reveal>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { AVAILABILITY_LABELS, CONDITION_LABELS } from "@/lib/catalog";
 import { ProductGallery } from "@/components/storefront/product-gallery";
 import { InquiryForm } from "@/components/storefront/inquiry-form";
 import { ProductCard } from "@/components/storefront/product-card";
+import { Reveal } from "@/components/storefront/reveal";
 import { Badge } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -140,16 +141,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </section>
       )}
 
-      <section aria-label="Product inquiry" className="mt-8 max-w-2xl">
+      <Reveal className="mt-8 max-w-2xl">
+      <section aria-label="Product inquiry">
         <InquiryForm productId={product.id} productLabel={`${product.name} (${product.referenceCode})`} />
       </section>
+      </Reveal>
 
       {related.length > 0 && (
         <section aria-label="Related products" className="mt-10">
           <h2 className="text-lg font-bold text-navy-900">Related Products</h2>
           <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
-            {related.map((p) => (
-              <ProductCard key={p.id} product={p} />
+            {related.map((p, i) => (
+              <Reveal key={p.id} delay={Math.min(i * 60, 240)} className="[&>*]:h-full">
+                <ProductCard product={p} />
+              </Reveal>
             ))}
           </div>
         </section>
