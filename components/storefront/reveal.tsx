@@ -42,10 +42,26 @@ export function Reveal({
           observer.disconnect();
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -48px 0px" }
+      // Threshold 0: any visible pixel reveals. A ratio threshold can never
+      // be reached on very tall blocks (e.g. long tables), leaving them
+      // stuck invisible until the user zooms out.
+      { threshold: 0, rootMargin: "0px 0px -48px 0px" }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    // Safety net: if the element is already within the viewport but the
+    // observer never fires (edge cases, zoom quirks), reveal it anyway.
+    // Below-fold content is untouched, so scroll animations still play.
+    const fallback = window.setTimeout(() => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, 2000);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, []);
 
   return (
