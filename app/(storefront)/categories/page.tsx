@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { getCatalogFacets } from "@/lib/catalog-queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Reveal } from "@/components/storefront/reveal";
 
-export const dynamic = "force-dynamic";
+// Static + ISR: facets are pre-cached for 5 minutes, so this page builds
+// and serves without any live aggregation.
+export const revalidate = 3600;
 
 type CategoryCard = {
   id: string;
@@ -19,22 +21,8 @@ export const metadata = {
 };
 
 export default async function CategoriesPage() {
-  let categories: CategoryCard[] = [];
-  try {
-    categories = await prisma.category.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        _count: { select: { products: { where: { published: true, deletedAt: null } } } },
-      },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    });
-  } catch (e) {
-    console.error("Categories query failed", e);
-  }
+  const facets = await getCatalogFacets();
+  const categories: CategoryCard[] = facets.categories;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">

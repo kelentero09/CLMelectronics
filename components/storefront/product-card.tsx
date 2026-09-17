@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/card";
@@ -48,12 +49,13 @@ export function ProductCard({ product }: { product: CardProduct }) {
       <Link href={`/products/${product.slug}`} className="block" aria-label={`View ${product.name}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-navy-900">
           {primary ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={primary}
               alt={product.images[0]?.alt || product.name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 400px"
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <ProductImagePlaceholder referenceCode={product.referenceCode} />

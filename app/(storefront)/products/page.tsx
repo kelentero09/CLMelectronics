@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Search, SlidersHorizontal } from "lucide-react";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PAGE_SIZE } from "@/lib/catalog";
+import { getCatalogFacets, productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
 import { ProductCard } from "@/components/storefront/product-card";
 import { CategoryTabs } from "@/components/storefront/category-tabs";
 import { EmptyState } from "@/components/storefront/empty-state";
@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// Dynamic (searchParams) but fast: filter facets come from the 5-minute
+// cache, and each visit costs only 2 lean indexed queries (page + count)
+// fetching card-sized rows with a single image each.
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -38,10 +41,6 @@ function buildLink(base: Record<string, string>, overrides: Record<string, strin
   return s ? `/products?${s}` : "/products";
 }
 
-type CatalogProduct = Prisma.ProductGetPayload<{
-  include: { category: { select: { name: true } }; images: true };
-}>;
-
 type CategoryWithCount = {
   id: string;
   name: string;
@@ -67,19 +66,21 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (availability) where.availability = availability;
   if (manufacturerParam) where.manufacturer = manufacturerParam;
   if (q) {
+    // Indexed trigram search over short columns only. `description` is
+    // deliberately excluded: it's an unindexed Text field and full-table
+    // ILIKE scans on it were the slowest part of filtered loads.
     where.OR = [
       { name: { contains: q, mode: "insensitive" } },
       { referenceCode: { contains: q, mode: "insensitive" } },
       { model: { contains: q, mode: "insensitive" } },
       { partNumber: { contains: q, mode: "insensitive" } },
       { manufacturer: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
     ];
   }
 
   const orderBy: Record<string, string> = { createdAt: "desc" };
 
-  let products: CatalogProduct[] = [];
+  let products: ProductCardData[] = [];
   let total = 0;
   let categories: CategoryWithCount[] = [];
   let manufacturers: string[] = [];
@@ -112,35 +113,23 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   }
 
   try {
-    const [p, t, cats, mfgs] = await Promise.all([
+    // Facets (tabs + sidebar) are served from cache — no live aggregation
+    // per visit. Only the page rows and the count hit the database.
+    const [p, t, facets] = await Promise.all([
       prisma.product.findMany({
         where: where as never,
-        include: {
-          category: { select: { name: true } },
-          images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
-        },
+        select: productCardSelect,
         orderBy: orderBy as never,
         skip,
         take: PAGE_SIZE,
       }),
       prisma.product.count({ where: where as never }),
-      prisma.category.findMany({
-        where: { isActive: true },
-        select: { id: true, name: true, slug: true, _count: { select: { products: { where: { published: true, deletedAt: null } } } } },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      }),
-      prisma.product.findMany({
-        where: { published: true, deletedAt: null, manufacturer: { not: null } },
-        select: { manufacturer: true },
-        distinct: ["manufacturer"],
-        orderBy: { manufacturer: "asc" },
-        take: 100,
-      }),
+      getCatalogFacets(),
     ]);
     products = p;
     total = t;
-    categories = cats.map((c) => ({ id: c.id, name: c.name, slug: c.slug, _count: { products: c._count.products } }));
-    manufacturers = mfgs.map((m) => m.manufacturer).filter((m): m is string => !!m);
+    categories = facets.categories;
+    manufacturers = facets.manufacturers;
   } catch (e) {
     console.error("Catalog query failed", e);
     dbOnline = false;

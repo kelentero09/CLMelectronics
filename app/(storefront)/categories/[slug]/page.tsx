@@ -1,17 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
 import { ProductCard } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { Reveal } from "@/components/storefront/reveal";
 
-export const dynamic = "force-dynamic";
+// ISR: category pages are pre-rendered and cached for 5 minutes; admin
+// product edits revalidate them, so repeat visits skip the database.
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  try {
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+    });
+    return categories.map((c) => ({ slug: c.slug }));
+  } catch {
+    return [];
+  }
+}
 
 type CategoryHeader = { id: string; name: string; description: string | null };
-type RelatedCardProduct = Prisma.ProductGetPayload<{
-  include: { category: { select: { name: true } }; images: true };
-}>;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -30,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function CategoryDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   let category: CategoryHeader | null = null;
-  let products: RelatedCardProduct[] = [];
+  let products: ProductCardData[] = [];
   try {
     category = await prisma.category.findFirst({
       where: { slug, isActive: true },
@@ -39,10 +50,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
     if (category) {
       products = await prisma.product.findMany({
         where: { categoryId: category.id, published: true, deletedAt: null },
-        include: {
-          category: { select: { name: true } },
-          images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1 },
-        },
+        select: productCardSelect,
         orderBy: { createdAt: "desc" },
         take: 24,
       });

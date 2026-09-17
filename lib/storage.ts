@@ -15,7 +15,13 @@ export { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES };
 
 export async function convertToWebP(input: Buffer | File): Promise<Buffer> {
   const buffer = input instanceof File ? Buffer.from(await input.arrayBuffer()) : input;
-  return sharp(buffer).webp({ quality: WEBP_QUALITY, effort: 4 }).toBuffer();
+  // Cap dimensions so cards/thumbnails never ship multi-megapixel originals:
+  // 1600px is plenty for the detail gallery while keeping files small.
+  return sharp(buffer)
+    .rotate()
+    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY, effort: 4 })
+    .toBuffer();
 }
 
 export function getPublicImageUrl(path: string): string {

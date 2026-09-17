@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
 import { categorySchema, firstIssueMessage } from "@/lib/validators";
@@ -11,6 +11,14 @@ export type ActionResult = { ok: true; id?: string } | { ok: false; error: strin
 function fail(error: unknown, fallback = "Something went wrong. Please try again."): ActionResult {
   console.error("[categories action]", error);
   return { ok: false, error: fallback };
+}
+
+function revalidateCatalog() {
+  updateTag("catalog-facets");
+  revalidatePath("/");
+  revalidatePath("/products");
+  revalidatePath("/categories");
+  revalidatePath("/admin/categories");
 }
 
 function parseCategoryForm(form: FormData) {
@@ -30,9 +38,7 @@ export async function createCategory(form: FormData): Promise<ActionResult> {
     const parsed = categorySchema.safeParse(parseCategoryForm(form));
     if (!parsed.success) return { ok: false, error: firstIssueMessage(parsed.error) };
     const category = await prisma.category.create({ data: parsed.data });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath("/admin/categories");
+    revalidateCatalog();
     return { ok: true, id: category.id };
   } catch (e) {
     return fail(e, "Could not create category. The name or slug may already exist.");
@@ -54,9 +60,7 @@ export async function updateCategory(id: string, form: FormData): Promise<Action
       };
     }
     await prisma.category.update({ where: { id }, data: parsed.data });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath("/admin/categories");
+    revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
     return fail(e, "Could not update category. The name or slug may already exist.");
@@ -67,9 +71,7 @@ export async function toggleCategoryActive(id: string, isActive: boolean): Promi
   try {
     await requireAdmin();
     await prisma.category.update({ where: { id }, data: { isActive } });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath("/admin/categories");
+    revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
     return fail(e);
@@ -87,9 +89,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
       };
     }
     await prisma.category.delete({ where: { id } });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath("/admin/categories");
+    revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
     return fail(e);

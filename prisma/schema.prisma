@@ -92,8 +92,9 @@ model Product {
   images           ProductImage[]
   inquiries        Inquiry[]
 
-  @@index([categoryId])
-  @@index([published, deletedAt])
+  @@index([categoryId, published, deletedAt])
+  @@index([published, deletedAt, createdAt(sort: Desc)])
+  @@index([published, deletedAt, manufacturer])
   @@map("products")
 }
 

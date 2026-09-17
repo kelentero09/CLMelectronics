@@ -3,19 +3,32 @@ import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AVAILABILITY_LABELS, CONDITION_LABELS } from "@/lib/catalog";
+import { productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
 import { ProductGallery } from "@/components/storefront/product-gallery";
 import { InquiryForm } from "@/components/storefront/inquiry-form";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
 import { Badge } from "@/components/ui/card";
 
-export const dynamic = "force-dynamic";
+// ISR: detail pages are cached for 5 minutes and pre-rendered at build
+// time; admin edits revalidate them, so repeat visits skip the database.
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  try {
+    const products = await prisma.product.findMany({
+      where: { published: true, deletedAt: null },
+      select: { slug: true },
+      take: 200,
+    });
+    return products.map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
+}
 
 type DetailProduct = Prisma.ProductGetPayload<{
   include: { category: { select: { name: true; slug: true } }; images: true };
-}>;
-type RelatedCardProduct = Prisma.ProductGetPayload<{
-  include: { category: { select: { name: true } }; images: true };
 }>;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -40,7 +53,7 @@ type Spec = { key: string; value: string };
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   let product: DetailProduct | null = null;
-  let related: RelatedCardProduct[] = [];
+  let related: ProductCardData[] = [];
   try {
     product = await prisma.product.findFirst({
       where: { slug, published: true, deletedAt: null },
@@ -52,10 +65,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     if (product?.categoryId) {
       related = await prisma.product.findMany({
         where: { categoryId: product.categoryId, published: true, deletedAt: null, id: { not: product.id } },
-        include: {
-          category: { select: { name: true } },
-          images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1 },
-        },
+        select: productCardSelect,
         take: 4,
       });
     }

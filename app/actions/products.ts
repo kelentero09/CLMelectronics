@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
 import { productSchema, firstIssueMessage } from "@/lib/validators";
@@ -55,6 +55,16 @@ function collectFiles(form: FormData): File[] {
     .slice(0, MAX_IMAGES_PER_PRODUCT);
 }
 
+/** Bust the cached catalog facets + listing pages after any catalog change. */
+function revalidateCatalog(slug?: string) {
+  updateTag("catalog-facets");
+  revalidatePath("/");
+  revalidatePath("/products");
+  revalidatePath("/categories");
+  if (slug) revalidatePath(`/products/${slug}`);
+  revalidatePath("/admin/products");
+}
+
 export async function createProduct(form: FormData): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -81,10 +91,7 @@ export async function createProduct(form: FormData): Promise<ActionResult> {
       }
     }
 
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath("/products");
-    revalidatePath("/admin/products");
+    revalidateCatalog();
     return { ok: true, id: product.id, slug: product.slug };
   } catch (e) {
     return fail(e);
@@ -128,10 +135,7 @@ export async function updateProduct(id: string, form: FormData): Promise<ActionR
       }
     }
 
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath(`/products/${product.slug}`);
-    revalidatePath("/admin/products");
+    revalidateCatalog(product.slug);
     return { ok: true, id: product.id, slug: product.slug };
   } catch (e) {
     return fail(e);
@@ -146,10 +150,7 @@ export async function togglePublish(id: string, published: boolean): Promise<Act
       data: { published },
       select: { id: true, slug: true },
     });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath(`/products/${product.slug}`);
-    revalidatePath("/admin/products");
+    revalidateCatalog(product.slug);
     return { ok: true, id: product.id };
   } catch (e) {
     return fail(e);
@@ -164,10 +165,7 @@ export async function softDeleteProduct(id: string): Promise<ActionResult> {
       data: { deletedAt: new Date(), published: false },
       select: { id: true, slug: true },
     });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath(`/products/${product.slug}`);
-    revalidatePath("/admin/products");
+    revalidateCatalog(product.slug);
     return { ok: true, id: product.id };
   } catch (e) {
     return fail(e);
@@ -178,9 +176,7 @@ export async function restoreProduct(id: string): Promise<ActionResult> {
   try {
     await requireAdmin();
     await prisma.product.update({ where: { id }, data: { deletedAt: null } });
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath("/admin/products");
+    revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
     return fail(e);
@@ -215,10 +211,7 @@ export async function deleteImage(imageId: string): Promise<ActionResult> {
       }
     }
 
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath(`/products/${image.product.slug}`);
-    revalidatePath("/admin/products");
+    revalidateCatalog(image.product.slug);
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -239,10 +232,7 @@ export async function setPrimaryImage(imageId: string): Promise<ActionResult> {
       prisma.productImage.update({ where: { id: imageId }, data: { isPrimary: true } }),
     ]);
 
-    revalidatePath("/");
-    revalidatePath("/products");
-    revalidatePath(`/products/${image.product.slug}`);
-    revalidatePath("/admin/products");
+    revalidateCatalog(image.product.slug);
     return { ok: true };
   } catch (e) {
     return fail(e);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ProductImagePlaceholder } from "@/components/storefront/product-card";
 import { cn } from "@/lib/utils";
 
@@ -24,12 +25,14 @@ export function ProductGallery({
   const current = images[Math.min(active, images.length - 1)];
   return (
     <div>
-      <div className="aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+      <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <Image
           src={current.url}
           alt={current.alt || productName}
-          className="h-full w-full object-contain"
+          fill
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          priority
+          className="object-contain"
         />
       </div>
       {images.length > 1 && (

@@ -16,9 +16,9 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getSiteContent } from "@/lib/site-content";
+import { productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
 import { ProfileSectionHeader } from "@/components/profile/profile-ui";
@@ -35,10 +35,6 @@ export const metadata = {
   description:
     "CLM Electronics Engineering Services provides technical support, equipment services, maintenance, repair, spare parts sourcing, and engineering solutions for semiconductor and manufacturing industries.",
 };
-
-type FeaturedProduct = Prisma.ProductGetPayload<{
-  include: { category: { select: { name: true } }; images: true };
-}>;
 
 const fallbackCapabilityCards = [
   {
@@ -131,14 +127,11 @@ export default async function CompanyProfileHomePage() {
   const profilePoints = content.home.profilePoints.length > 0 ? content.home.profilePoints : fallbackProfilePoints;
   const boardTypes = content.home.boardTypes.length > 0 ? content.home.boardTypes : fallbackBoardTypes;
 
-  let featured: FeaturedProduct[] = [];
+  let featured: ProductCardData[] = [];
   try {
     featured = await prisma.product.findMany({
       where: { published: true, deletedAt: null },
-      include: {
-        category: { select: { name: true } },
-        images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1 },
-      },
+      select: productCardSelect,
       orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
       take: 4,
     });
