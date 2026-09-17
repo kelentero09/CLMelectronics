@@ -9,6 +9,7 @@ import { PrismaClient } from "@prisma/client";
 import { FIXED_CATEGORIES } from "../lib/catalog";
 import { slugify } from "../lib/utils";
 import { boardRepairRecords } from "../data/board-repair";
+import { SITE_CONTENT_DEFAULTS } from "../data/site-content-defaults";
 
 const prisma = new PrismaClient();
 
@@ -153,6 +154,29 @@ async function main() {
     repairUpserts++;
   }
   console.log(`Board repairs seeded (${repairUpserts} upserted).`);
+
+  // Website CMS contents — idempotent upsert by stable key. Existing
+  // admin-edited rows keep their value unless the key is new; seed only
+  // fills missing keys so client edits are never overwritten.
+  let siteContentCount = 0;
+  for (const entry of SITE_CONTENT_DEFAULTS) {
+    const existing = await prisma.siteContent.findUnique({ where: { key: entry.key } });
+    if (!existing) {
+      await prisma.siteContent.create({
+        data: {
+          key: entry.key,
+          group: entry.group,
+          label: entry.label,
+          description: entry.description ?? null,
+          value: entry.value,
+          data: entry.data === undefined ? undefined : entry.data,
+          sortOrder: entry.sortOrder,
+        },
+      });
+      siteContentCount++;
+    }
+  }
+  console.log(`Site contents seeded (${siteContentCount} new keys, ${SITE_CONTENT_DEFAULTS.length} total).`);
 }
 
 main()

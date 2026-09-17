@@ -18,15 +18,17 @@ import {
 } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { company } from "@/data/company";
-import { equipmentGroups } from "@/data/equipment";
+import { getSiteContent } from "@/lib/site-content";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
 import { ProfileSectionHeader } from "@/components/profile/profile-ui";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
+// ISR: HTML is cached and served instantly; admin content/product edits
+// revalidate this path, so updates appear immediately while repeat visits
+// skip the database entirely (speed win over per-request rendering).
+export const revalidate = 300;
 
 export const metadata = {
   title: "CLM Electronics Engineering Services | Semiconductor & Manufacturing Solutions",
@@ -38,7 +40,7 @@ type FeaturedProduct = Prisma.ProductGetPayload<{
   include: { category: { select: { name: true } }; images: true };
 }>;
 
-const capabilityCards = [
+const fallbackCapabilityCards = [
   {
     icon: Wrench,
     title: "Technical Support",
@@ -71,7 +73,7 @@ const capabilityCards = [
   },
 ];
 
-const boardTypes = [
+const fallbackBoardTypes = [
   "Main boards",
   "Driver boards",
   "Power supplies",
@@ -80,7 +82,7 @@ const boardTypes = [
   "Servo / driver boards",
 ];
 
-const whyClm = [
+const fallbackWhyClm = [
   {
     icon: ShieldCheck,
     title: "Quality Service",
@@ -103,7 +105,7 @@ const whyClm = [
   },
 ];
 
-const profilePoints = [
+const fallbackProfilePoints = [
   "Established January 10, 2023",
   "Semiconductor and manufacturing focus",
   "Technical and engineering services",
@@ -113,6 +115,22 @@ const profilePoints = [
 ];
 
 export default async function CompanyProfileHomePage() {
+  const content = await getSiteContent();
+  const company = content.company;
+
+  const capabilityIcons = [Wrench, CalendarCheck, Cog, Package, CircuitBoard, GraduationCap];
+  const whyIcons = [ShieldCheck, Headphones, Award, Factory];
+  const capabilityCards = (content.home.capabilityCards.length > 0
+    ? content.home.capabilityCards
+    : fallbackCapabilityCards.map(({ title, text }) => ({ title, text }))
+  ).map((c, i) => ({ ...c, icon: capabilityIcons[i % capabilityIcons.length] }));
+  const whyClm = (content.home.whyCards.length > 0
+    ? content.home.whyCards
+    : fallbackWhyClm.map(({ title, text }) => ({ title, text }))
+  ).map((w, i) => ({ ...w, icon: whyIcons[i % whyIcons.length] }));
+  const profilePoints = content.home.profilePoints.length > 0 ? content.home.profilePoints : fallbackProfilePoints;
+  const boardTypes = content.home.boardTypes.length > 0 ? content.home.boardTypes : fallbackBoardTypes;
+
   let featured: FeaturedProduct[] = [];
   try {
     featured = await prisma.product.findMany({
@@ -135,13 +153,13 @@ export default async function CompanyProfileHomePage() {
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_auto] lg:gap-14 lg:py-28">
           <Reveal variant="left" className="min-w-0">
             <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent-400 sm:text-sm">
-              Established January 10, 2023 · Muntinlupa City
+              {content.home.heroBadge}
             </p>
             <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
-              CLM Electronics Engineering Services
+              {content.home.heroTitle}
             </h1>
             <p className="mt-4 text-lg font-semibold text-slate-200 sm:text-2xl">
-              Technical Solutions for Semiconductor &amp; Manufacturing Industries
+              {content.home.heroSubtitle}
             </p>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
               {company.description}
@@ -179,7 +197,7 @@ export default async function CompanyProfileHomePage() {
               eyebrow="Company Profile"
               eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
               title="Who CLM Is"
-              description="CLM Electronics Engineering Services was established on January 10, 2023 to provide services and solutions for semiconductor and manufacturing industries. CLM builds long-term, trusted business relationships with customers through responsive, quality, and reliable technical services."
+              description={content.home.profileDescription}
             />
             <ul className="mt-6 grid gap-2 sm:grid-cols-2" aria-label="Company highlights">
               {profilePoints.map((point) => (
@@ -220,9 +238,7 @@ export default async function CompanyProfileHomePage() {
           <article className="h-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <p className="text-xl font-bold uppercase tracking-[0.15em] text-steel-600 sm:text-2xl">Mission</p>
             <p className="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">
-              To establish total customer satisfaction through quality products, support, and services
-              by providing the best and most effective quality solutions and accountable
-              after-sales/service support.
+              {company.mission}
             </p>
           </article>
           </Reveal>
@@ -230,8 +246,7 @@ export default async function CompanyProfileHomePage() {
           <article className="h-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <p className="text-xl font-bold uppercase tracking-[0.15em] text-steel-600 sm:text-2xl">Vision</p>
             <p className="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">
-              We envision being one of the best suppliers in terms of sales and technical support
-              services, known for quality and timely services.
+              {company.vision}
             </p>
           </article>
           </Reveal>
@@ -245,7 +260,7 @@ export default async function CompanyProfileHomePage() {
           eyebrow="Capabilities"
           eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
           title="What CLM Does"
-          description="A high-level overview of CLM's capabilities. See the Services page for full details."
+          description={content.home.capabilitiesDescription}
         />
         </Reveal>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -274,11 +289,10 @@ export default async function CompanyProfileHomePage() {
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent-400 sm:text-base">Equipment</p>
           <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Semiconductor Equipment Expertise</h2>
           <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
-            CLM services semiconductor manufacturing equipment across these major categories.
-            Detailed machine models remain on the Equipment page.
+            {content.home.equipmentDescription}
           </p>
           <ul className="mt-6 flex flex-wrap gap-2" aria-label="Equipment categories">
-            {equipmentGroups.map((g) => (
+            {content.equipment.groups.map((g) => (
               <li
                 key={g.id}
                 className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white"
@@ -304,7 +318,7 @@ export default async function CompanyProfileHomePage() {
               eyebrow="Board repair"
               eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
               title="Board Repair Services"
-              description="CLM provides board repair capabilities for equipment-related electronic boards, based on technical capability and available resources."
+              description={content.home.boardDescription}
             />
             <ul className="mt-5 grid grid-cols-2 gap-2" aria-label="Supported board types">
               {boardTypes.map((b) => (
@@ -334,7 +348,7 @@ export default async function CompanyProfileHomePage() {
             eyebrow="Products"
             eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
             title="Products & Technical Solutions"
-            description="A small selection from the CLM catalog — equipment, spare parts, and technical items. Information and inquiry only."
+            description={content.home.productsDescription}
           />
           </Reveal>
           {featured.length > 0 ? (
@@ -368,7 +382,7 @@ export default async function CompanyProfileHomePage() {
           eyebrow="Why CLM"
           eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
           title="A Dependable Engineering Partner"
-          description="What customers can expect when working with CLM Electronics Engineering Services."
+          description={content.home.whyDescription}
         />
         </Reveal>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -390,11 +404,10 @@ export default async function CompanyProfileHomePage() {
       <section className="blueprint-grid bg-navy-950" aria-label="Contact call to action">
         <Reveal className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6 sm:py-16">
           <h2 className="mx-auto max-w-2xl text-2xl font-bold text-white sm:text-3xl">
-            Looking for Reliable Technical &amp; Engineering Support?
+            {content.home.ctaTitle}
           </h2>
           <p className="mx-auto mt-3 max-w-xl leading-relaxed text-slate-300">
-            Tell us about your equipment or service need — CLM responds with quality, reliable
-            technical support and accountable after-sales service.
+            {content.home.ctaDescription}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "bg-steel-500 hover:bg-steel-600")}>
@@ -422,12 +435,12 @@ export default async function CompanyProfileHomePage() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
-                <span>09979269559 · 88384882</span>
+                <span>{company.phonesDisplay}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
-                <a href="mailto:er.canlas23@gmail.com" className="break-all underline hover:text-navy-900">
-                  er.canlas23@gmail.com
+                <a href={`mailto:${company.email}`} className="break-all underline hover:text-navy-900">
+                  {company.email}
                 </a>
               </li>
             </ul>

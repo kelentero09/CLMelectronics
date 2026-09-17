@@ -1,6 +1,9 @@
-import { equipmentGroups, partsSourcing } from "@/data/equipment";
+import { getSiteContent } from "@/lib/site-content";
 import { ProfilePageHero, ProfileSectionHeader } from "@/components/profile/profile-ui";
 import { Reveal } from "@/components/storefront/reveal";
+
+// ISR: cached HTML served instantly; admin edits revalidate this path.
+export const revalidate = 3600;
 
 export const metadata = {
   title: "Equipment Expertise",
@@ -8,13 +11,17 @@ export const metadata = {
     "ASM, K&S/KNS, ESEC, dicing/saw, and aluminum wedge bonding equipment CLM has experience servicing, plus spare parts sourcing capability.",
 };
 
-export default function EquipmentPage() {
+export default async function EquipmentPage() {
+  const content = await getSiteContent();
+  const equipmentGroups = content.equipment.groups;
+  const partsSourcing = content.equipment.partsSourcing;
+
   return (
     <>
       <ProfilePageHero
         eyebrow="Equipment"
-        title="Equipment Expertise"
-        description="The equipment and brands below reflect machines CLM has experience servicing. They are presented as serviced equipment — not as official manufacturer affiliations or authorized distributorships."
+        title={content.equipment.heroTitle}
+        description={content.equipment.heroDescription}
       />
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6" aria-label="Equipment by category">
         <div className="grid gap-6 md:grid-cols-2">
@@ -37,8 +44,7 @@ export default function EquipmentPage() {
         </div>
         <Reveal className="mt-6">
         <p className="rounded-lg border border-steel-500/30 bg-steel-500/5 p-4 text-sm text-slate-600">
-          CLM also provides services for other equipment brands based on available capabilities and
-          resources. Contact us with your specific machine model to confirm coverage.
+          {content.equipment.partsNote}
         </p>
         </Reveal>
       </section>
@@ -49,7 +55,7 @@ export default function EquipmentPage() {
           <ProfileSectionHeader
             eyebrow="Parts sourcing"
             title="Spare Parts Sourcing Capability"
-            description="We source machine spare parts according to customer requirements and equipment needs. Availability depends on equipment model and sourcing conditions."
+            description={content.equipment.partsDescription}
           />
           </Reveal>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

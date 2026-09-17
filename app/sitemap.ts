@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+// Regenerate at most once per hour — sitemap hits the DB, no need for realtime.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = ["", "/products", "/categories", "/about", "/services", "/equipment", "/board-repair", "/contact"].map((p) => ({
     url: `${BASE}${p}`,

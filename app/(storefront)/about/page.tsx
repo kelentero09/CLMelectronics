@@ -1,7 +1,10 @@
-import { company } from "@/data/company";
+import { getSiteContent } from "@/lib/site-content";
 import { ProfilePageHero, ProfileSectionHeader, ProfileCard } from "@/components/profile/profile-ui";
 import { Reveal } from "@/components/storefront/reveal";
 import LegalDocuments from "@/components/profile/legal-documents";
+
+// ISR: cached HTML served instantly; admin edits revalidate this path.
+export const revalidate = 3600;
 
 export const metadata = {
   title: "About CLM",
@@ -9,22 +12,22 @@ export const metadata = {
     "CLM Electronics Engineering Services — established January 10, 2023 in Muntinlupa City, Philippines. Services and solutions for semiconductor and manufacturing industries. View DTI, BIR, and business permit registration documents.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const content = await getSiteContent();
+  const company = content.company;
+
   return (
     <>
       <ProfilePageHero
         eyebrow="About CLM"
-        title="Company Profile"
-        description="A service-focused engineering provider for semiconductor and manufacturing equipment."
+        title={content.about.heroTitle}
+        description={content.about.heroDescription}
       />
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6" aria-label="Company overview">
         <Reveal>
         <ProfileSectionHeader eyebrow="Company overview" title="Who We Are" />
         <p className="mt-4 max-w-3xl leading-relaxed text-slate-600">
-          CLM Electronics Engineering Services was established on January 10, 2023 to provide
-          services and solutions for the semiconductor and manufacturing industries. We aim to
-          build long-term, trusted business relationships with customers through immediate,
-          quality, and reliable service.
+          {company.aboutIntro}
         </p>
         <p className="mt-3 max-w-3xl leading-relaxed text-slate-600">{company.afterSales}</p>
         <dl className="mt-6 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-6 sm:grid-cols-3">
@@ -57,7 +60,7 @@ export default function AboutPage() {
       <div className="border-t border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
           <Reveal>
-          <LegalDocuments />
+          <LegalDocuments description={content.about.legalDescription} />
           </Reveal>
         </div>
       </div>

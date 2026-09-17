@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { legalDocuments } from "@/data/legal";
 import { ProfileSectionHeader } from "@/components/profile/profile-ui";
 
-export default function LegalDocuments() {
+export default function LegalDocuments({ description }: { description?: string }) {
   const [active, setActive] = useState<number | null>(null);
 
   const close = useCallback(() => setActive(null), []);
@@ -36,7 +36,10 @@ export default function LegalDocuments() {
       <ProfileSectionHeader
         eyebrow="Legitimacy"
         title="Business Registration & Permits"
-        description="CLM Electronics Engineering Services operates as a registered business in the Philippines. Selected registration documents are shown below for customer and partner reference — select any document to view it in full."
+        description={
+          description ??
+          "CLM Electronics Engineering Services operates as a registered business in the Philippines. Selected registration documents are shown below for customer and partner reference — select any document to view it in full."
+        }
       />
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

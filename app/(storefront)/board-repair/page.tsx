@@ -2,6 +2,7 @@ import { ProfilePageHero } from "@/components/profile/profile-ui";
 import BoardRepairBrowser from "@/components/profile/board-repair-browser";
 import { boardRepairRecords, type BoardRepairRecord } from "@/data/board-repair";
 import { boardRepairDelegate } from "@/lib/board-repairs";
+import { getSiteContent } from "@/lib/site-content";
 
 // Cached with ISR: admin create/update/delete actions call
 // revalidatePath("/board-repair"), so edits appear immediately while repeat
@@ -28,6 +29,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export default async function BoardRepairPage() {
+  const content = await getSiteContent();
   let records: BoardRepairRecord[] = boardRepairRecords;
   try {
     const delegate = boardRepairDelegate();
@@ -60,8 +62,8 @@ export default async function BoardRepairPage() {
     <>
       <ProfilePageHero
         eyebrow="Board repair"
-        title="Board Repair Capability"
-        description="CLM Electronics Engineering Services provides board repair capabilities for semiconductor and manufacturing equipment. Our repair services cover a range of control, driver, power supply, interface, and electronic boards based on our technical capabilities and available resources."
+        title={content.boardRepair.heroTitle}
+        description={content.boardRepair.heroDescription}
       />
       {/* No Reveal wrapper here: this is a tall, filterable data table and
           must never be opacity-gated as a single block. */}

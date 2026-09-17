@@ -1,7 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getSiteContent } from "@/lib/site-content";
 
-export function SiteFooter() {
+// Server component reading the hour-cached CMS map — no per-request DB cost.
+export async function SiteFooter() {
+  const content = await getSiteContent();
+  const company = content.company;
+
   return (
     <footer className="bg-navy-950 text-slate-300">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3">
@@ -14,21 +19,20 @@ export function SiteFooter() {
               height={40}
               className="h-10 w-10 rounded bg-white object-contain"
             />
-            <p className="text-base font-bold text-white">CLM Electronics Engineering Services</p>
+            <p className="text-base font-bold text-white">{company.name}</p>
           </div>
           <p className="mt-2 max-w-sm text-sm leading-relaxed">
-            B2B product catalog for semiconductor and manufacturing equipment, spare parts,
-            consumables, and materials. Information and inquiry only.
+            {company.footerAbout}
           </p>
         </div>
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-white">Contact</h2>
           <ul className="mt-3 space-y-2 text-sm">
-            <li>#9 Bayabas St., Mutual Homes Putatan, Muntinlupa City, Philippines</li>
-            <li>09979269559 / 88384882</li>
+            <li>{company.address}</li>
+            <li>{company.phonesDisplay}</li>
             <li>
-              <a href="mailto:er.canlas23@gmail.com" className="underline hover:text-white">
-                er.canlas23@gmail.com
+              <a href={`mailto:${company.email}`} className="underline hover:text-white">
+                {company.email}
               </a>
             </li>
           </ul>
@@ -50,7 +54,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-white/10">
         <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-slate-400 sm:px-6">
-          © 2026 CLM Electronics Engineering Services. All rights reserved.
+          © 2026 {company.name}. All rights reserved.
         </p>
       </div>
     </footer>

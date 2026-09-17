@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const nav = [
   { label: "Add Product", href: "/admin/products/new", icon: Plus },
   { label: "Categories", href: "/admin/categories", icon: FolderTree },
   { label: "Board Repairs", href: "/admin/repairs", icon: Wrench },
+  { label: "Website Content", href: "/admin/content", icon: FileText },
   { label: "Inquiries", href: "/admin/inquiries", icon: Inbox },
 ];
 

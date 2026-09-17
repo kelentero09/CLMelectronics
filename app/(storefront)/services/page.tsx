@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { serviceCategories, wedgeBrands } from "@/data/services";
+import { getSiteContent } from "@/lib/site-content";
 import { ProfilePageHero } from "@/components/profile/profile-ui";
 import { Reveal } from "@/components/storefront/reveal";
+
+// ISR: cached HTML served instantly; admin edits revalidate this path.
+export const revalidate = 3600;
 
 export const metadata = {
   title: "Services",
@@ -9,13 +12,17 @@ export const metadata = {
     "Repair, preventive and predictive maintenance, machine rebuild, baselining, calibration, training, spare parts sourcing, board repair, and wedge bonding consumables.",
 };
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const content = await getSiteContent();
+  const serviceCategories = content.services.categories;
+  const wedgeBrands = content.services.wedgeBrands;
+
   return (
     <>
       <ProfilePageHero
         eyebrow="Services"
-        title="Engineering Services & Technical Capabilities"
-        description="Organized service capabilities for semiconductor and manufacturing equipment — focused on reliability, maintainability, and responsive support."
+        title={content.services.heroTitle}
+        description={content.services.heroDescription}
       />
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-12 sm:px-6">
         {serviceCategories.map((cat, i) => (
@@ -32,7 +39,7 @@ export default function ServicesPage() {
                 </p>
                 <h2 className="mt-1 text-xl font-bold text-navy-900">{cat.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">{cat.summary}</p>
-                {cat.id === "wedge-bonding" && (
+                {cat.id === "wedge-bonding" && wedgeBrands.length > 0 && (
                   <p className="mt-3 text-xs text-slate-500">
                     Referenced brands: {wedgeBrands.join(" · ")}. Shown as serviced equipment, not
                     an authorized distributorship.

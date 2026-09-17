@@ -7,15 +7,16 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin Dashboard" };
 
 export default async function AdminHomePage() {
-  let stats = { products: 0, published: 0, categories: 0, inquiriesNew: 0, repairs: 0 };
+  let stats = { products: 0, published: 0, categories: 0, inquiriesNew: 0, repairs: 0, content: 0 };
   let recent: { id: string; name: string; referenceCode: string; updatedAt: Date }[] = [];
   try {
-    const [products, published, categories, inquiriesNew, repairs, recentRows] = await Promise.all([
+    const [products, published, categories, inquiriesNew, repairs, content, recentRows] = await Promise.all([
       prisma.product.count({ where: { deletedAt: null } }),
       prisma.product.count({ where: { published: true, deletedAt: null } }),
       prisma.category.count({ where: { isActive: true } }),
       prisma.inquiry.count({ where: { status: "NEW" } }),
       prisma.boardRepair.count({ where: { isActive: true } }),
+      prisma.siteContent.count().catch(() => 0),
       prisma.product.findMany({
         where: { deletedAt: null },
         select: { id: true, name: true, referenceCode: true, updatedAt: true },
@@ -23,7 +24,7 @@ export default async function AdminHomePage() {
         take: 5,
       }),
     ]);
-    stats = { products, published, categories, inquiriesNew, repairs };
+    stats = { products, published, categories, inquiriesNew, repairs, content };
     recent = recentRows;
   } catch (e) {
     console.error("Admin dashboard query failed", e);
@@ -34,6 +35,7 @@ export default async function AdminHomePage() {
     ["Published", stats.published, "/admin/products"],
     ["Categories", stats.categories, "/admin/categories"],
     ["Board Repairs", stats.repairs, "/admin/repairs"],
+    ["Website Content", stats.content, "/admin/content"],
     ["New Inquiries", stats.inquiriesNew, "/admin/inquiries"],
   ];
 

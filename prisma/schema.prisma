@@ -129,6 +129,26 @@ model Inquiry {
   @@map("inquiries")
 }
 
+// Website CMS contents (managed in /admin/content, shown on storefront).
+// `key` is the stable lookup key (e.g. "company.name"); `value` holds plain
+// text and `data` holds structured JSON for lists (cards, points, groups).
+// Seeded from the current website copy — DB is source of truth, static
+// defaults in data/site-content-defaults.ts are fallback for speed/safety.
+model SiteContent {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  group       String   @default("general")
+  label       String
+  description String?
+  value       String   @default("") @db.Text
+  data        Json?
+  sortOrder   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@index([group, sortOrder])
+  @@map("site_contents")
+}
+
 // Board repair capability records (managed in /admin/repairs, shown on
 // /board-repair). `key` is the stable seed key (e.g. "da-01"); new admin
 // entries get a generated key. Images are WebP — either local /public paths
