@@ -9,7 +9,7 @@ export const revalidate = 3600;
 export const metadata = {
   title: "About CLM",
   description:
-    "CLM Electronics Engineering Services — established January 10, 2023 in Muntinlupa City, Philippines. Services and solutions for semiconductor and manufacturing industries. View DTI, BIR, and business permit registration documents.",
+    "CLM Electronics Engineering Services — established January 10, 2023 in Muntinlupa City, Philippines. Services and solutions for semiconductor and manufacturing industries.",
 };
 
 export default async function AboutPage() {

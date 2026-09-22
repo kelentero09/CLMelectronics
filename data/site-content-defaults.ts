@@ -248,7 +248,7 @@ export const SITE_CONTENT_DEFAULTS: SiteContentDefault[] = [
     group: "about",
     label: "Registration section intro",
     value:
-      "CLM Electronics Engineering Services operates as a registered business in the Philippines. Selected registration documents are shown below for customer and partner reference — select any document to view it in full.",
+      "CLM Electronics Engineering Services is a DTI and BIR registered business in the Philippines with a valid local business permit.",
     sortOrder: 3,
   },
 
