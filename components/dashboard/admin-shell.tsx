@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText, HelpCircle } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ const nav = [
   { label: "Board Repairs", href: "/admin/repairs", icon: Wrench },
   { label: "Website Content", href: "/admin/content", icon: FileText },
   { label: "Inquiries", href: "/admin/inquiries", icon: Inbox },
+  { label: "Help Guide", href: "/admin/help", icon: HelpCircle },
 ];
 
 export function AdminShell({ children, adminEmail }: { children: React.ReactNode; adminEmail: string }) {
@@ -59,7 +60,8 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-2 rounded px-3 py-2 text-sm font-medium",
-                  active ? "bg-white/10 text-white" : "hover:bg-white/5"
+                  active ? "bg-white/10 text-white" : "hover:bg-white/5",
+                  item.href === "/admin/help" && "mt-4 border-t border-white/10 pt-4"
                 )}
               >
                 <Icon className="h-4 w-4" /> {item.label}
