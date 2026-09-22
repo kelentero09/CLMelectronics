@@ -182,7 +182,42 @@ export default async function CompanyProfileHomePage() {
         </div>
       </section>
 
-      {/* 2. COMPANY PROFILE */}
+      {/* 2. PRODUCTS SUMMARY */}
+      <section className="border-y border-slate-200 bg-slate-50" aria-label="Products and technical solutions">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+          <Reveal>
+          <ProfileSectionHeader
+            eyebrow="Products"
+            eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+            title="Products & Technical Solutions"
+            description={content.home.productsDescription}
+          />
+          </Reveal>
+          {featured.length > 0 ? (
+            <div className="mt-8 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+              {featured.map((p, i) => (
+                <Reveal key={p.id} delay={Math.min(i * 80, 320)} className="[&>*]:h-full">
+                  <ProductCard product={p} />
+                </Reveal>
+              ))}
+            </div>
+          ) : (
+            <Reveal className="mt-6">
+            <p className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">
+              Product highlights are currently unavailable. Browse the full catalog for equipment,
+              spare parts, consumables, and materials.
+            </p>
+            </Reveal>
+          )}
+          <Reveal className="mt-8 text-center">
+            <Link href="/products" className={buttonVariants({ size: "lg" })}>
+              View Products <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 3. COMPANY PROFILE */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Company profile">
         <div className="grid items-center gap-8 lg:grid-cols-2">
           <Reveal variant="left" className="min-w-0">
@@ -224,7 +259,7 @@ export default async function CompanyProfileHomePage() {
         </div>
       </section>
 
-      {/* 3. MISSION & VISION */}
+      {/* 4. MISSION & VISION */}
       <section className="border-y border-slate-200 bg-slate-50" aria-label="Mission and vision">
         <div className="mx-auto grid max-w-7xl gap-5 px-4 py-10 sm:px-6 md:grid-cols-2">
           <Reveal className="h-full">
@@ -246,7 +281,7 @@ export default async function CompanyProfileHomePage() {
         </div>
       </section>
 
-      {/* 4. WHAT CLM DOES */}
+      {/* 5. WHAT CLM DOES */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="What CLM does">
         <Reveal>
         <ProfileSectionHeader
@@ -276,7 +311,7 @@ export default async function CompanyProfileHomePage() {
         </Reveal>
       </section>
 
-      {/* 5. EQUIPMENT EXPERTISE */}
+      {/* 6. EQUIPMENT EXPERTISE */}
       <section className="blueprint-grid bg-navy-950" aria-label="Equipment expertise">
         <Reveal className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent-400 sm:text-base">Equipment</p>
@@ -303,7 +338,7 @@ export default async function CompanyProfileHomePage() {
         </Reveal>
       </section>
 
-      {/* 6. BOARD REPAIR SUMMARY */}
+      {/* 7. BOARD REPAIR SUMMARY */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Board repair services">
         <div className="grid items-center gap-8 lg:grid-cols-2">
           <Reveal variant="left" className="min-w-0">
@@ -329,41 +364,6 @@ export default async function CompanyProfileHomePage() {
           </Reveal>
           <Reveal variant="right" delay={120} className="flex min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-10">
             <CircuitBoard className="h-24 w-24 text-navy-900" strokeWidth={1.25} aria-hidden="true" />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 7. PRODUCTS SUMMARY */}
-      <section className="border-y border-slate-200 bg-slate-50" aria-label="Products and technical solutions">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
-          <Reveal>
-          <ProfileSectionHeader
-            eyebrow="Products"
-            eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-            title="Products & Technical Solutions"
-            description={content.home.productsDescription}
-          />
-          </Reveal>
-          {featured.length > 0 ? (
-            <div className="mt-8 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
-              {featured.map((p, i) => (
-                <Reveal key={p.id} delay={Math.min(i * 80, 320)} className="[&>*]:h-full">
-                  <ProductCard product={p} />
-                </Reveal>
-              ))}
-            </div>
-          ) : (
-            <Reveal className="mt-6">
-            <p className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">
-              Product highlights are currently unavailable. Browse the full catalog for equipment,
-              spare parts, consumables, and materials.
-            </p>
-            </Reveal>
-          )}
-          <Reveal className="mt-8 text-center">
-            <Link href="/products" className={buttonVariants({ size: "lg" })}>
-              View Products <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
           </Reveal>
         </div>
       </section>

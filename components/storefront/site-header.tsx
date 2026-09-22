@@ -13,7 +13,6 @@ const links = [
   { label: "Board Repair", href: "/board-repair" },
   { label: "Products", href: "/products" },
   { label: "Categories", href: "/categories" },
-  { label: "Contact", href: "/contact" },
 ];
 
 export function SiteHeader() {
