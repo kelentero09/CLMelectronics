@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // Speed: lean production headers, compressed responses, modern image
   // formats with long CDN cache for static assets.
   poweredByHeader: false,
