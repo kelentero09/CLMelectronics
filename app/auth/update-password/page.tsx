@@ -30,16 +30,21 @@ function UpdatePasswordForm() {
     async function checkSession() {
       try {
         const supabase = createSupabaseBrowserClient();
-        const { data } = await supabase.auth.getSession();
-        // also handle hash fragment flow (Supabase may put tokens in URL hash)
-        if (!data.session && typeof window !== "undefined" && window.location.hash.includes("access_token")) {
-          // Let Supabase parse hash automatically on next tick
-          await new Promise((r) => setTimeout(r, 300));
-          const { data: retry } = await supabase.auth.getSession();
-          if (!cancelled) setHasSession(!!retry.session);
-        } else {
-          if (!cancelled) setHasSession(!!data.session);
+        // Handle hash fragment flow: #access_token=...&refresh_token=... from Supabase verify
+        if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
+          const params = new URLSearchParams(window.location.hash.substring(1));
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token") || "";
+          if (access_token) {
+            try {
+              await supabase.auth.setSession({ access_token, refresh_token });
+            } catch {}
+            // Clean hash from URL
+            window.history.replaceState(null, "", window.location.pathname + window.location.search);
+          }
         }
+        const { data } = await supabase.auth.getSession();
+        if (!cancelled) setHasSession(!!data.session);
       } catch {
         if (!cancelled) setHasSession(false);
       } finally {

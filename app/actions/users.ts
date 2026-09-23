@@ -77,7 +77,7 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
 
     const supabase = createSupabaseServiceClient();
     const siteUrl = await getSiteUrl();
-    const redirectTo = `${siteUrl}/auth/callback`;
+    const redirectTo = `${siteUrl}/auth/callback?next=/auth/update-password`;
 
     // Bypass Supabase's rate-limited mailer: generate link server-side and send via free Node mailer (Nodemailer)
     // If SMTP_* not set, we still generate the link and return it for manual copy (zero cost, no external service).
@@ -163,7 +163,7 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
 
     const supabase = createSupabaseServiceClient();
     const siteUrl = await getSiteUrl();
-    const redirectTo = `${siteUrl}/auth/callback`;
+    const redirectTo = `${siteUrl}/auth/callback?next=/auth/update-password`;
 
     // Bypass Supabase mailer: generate link + Node mailer
     const { data, error } = await supabase.auth.admin.generateLink({
