@@ -38,13 +38,23 @@ export async function createSupabaseServerClient() {
   });
 }
 
+function isRefreshTokenError(err: unknown): boolean {
+  const msg =
+    err instanceof Error ? err.message : typeof err === "string" ? err : (err as { message?: string })?.message ?? "";
+  return /refresh_token_not_found|refresh token not found|invalid refresh token/i.test(msg);
+}
+
 export async function getSupabaseSession() {
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.getSession();
-    if (error) return null;
+    if (error) {
+      if (isRefreshTokenError(error)) return null;
+      return null;
+    }
     return data.session;
-  } catch {
+  } catch (err) {
+    if (isRefreshTokenError(err)) return null;
     return null;
   }
 }
@@ -53,9 +63,13 @@ export async function getSupabaseUser() {
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.getUser();
-    if (error) return null;
+    if (error) {
+      if (isRefreshTokenError(error)) return null;
+      return null;
+    }
     return data.user;
-  } catch {
+  } catch (err) {
+    if (isRefreshTokenError(err)) return null;
     return null;
   }
 }

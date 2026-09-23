@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText, HelpCircle, Users } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ const nav = [
   { label: "Board Repairs", href: "/admin/repairs", icon: Wrench },
   { label: "Website Content", href: "/admin/content", icon: FileText },
   { label: "Inquiries", href: "/admin/inquiries", icon: Inbox },
+  { label: "Users", href: "/admin/users", icon: Users },
   { label: "Help Guide", href: "/admin/help", icon: HelpCircle },
 ];
 

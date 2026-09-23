@@ -35,9 +35,40 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      const msg = error.message ?? "";
+      const isRefreshErr = /refresh_token_not_found|refresh token not found|invalid refresh token/i.test(msg);
+      if (isRefreshErr) {
+        // Invalid refresh token — clear stale cookies and treat as unauthenticated without noise
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        const redirectRes = NextResponse.redirect(loginUrl);
+        // Expire Supabase cookies
+        for (const c of request.cookies.getAll()) {
+          if (c.name.startsWith("sb-")) redirectRes.cookies.delete(c.name);
+        }
+        return redirectRes;
+      }
+      // any other error -> unauthenticated
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    user = data.user;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/refresh_token_not_found|refresh token not found|invalid refresh token/i.test(msg)) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   if (!user) {
     const loginUrl = new URL("/login", request.url);

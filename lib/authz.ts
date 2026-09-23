@@ -29,6 +29,7 @@ export async function requireAdmin() {
     );
   }
   if (!appUser || appUser.role !== "ADMIN") redirect("/login?error=forbidden");
+  if (appUser.isActive === false) redirect("/login?error=disabled");
   return { supaUser, appUser };
 }
 
@@ -37,7 +38,7 @@ export async function isAdmin(): Promise<boolean> {
     const supaUser = await getSupabaseUser();
     if (!supaUser?.email) return false;
     const appUser = await prisma.user.findUnique({ where: { email: supaUser.email } });
-    return appUser?.role === "ADMIN";
+    return appUser?.role === "ADMIN" && appUser.isActive !== false;
   } catch {
     return false;
   }

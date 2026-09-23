@@ -47,6 +47,8 @@ model User {
   email     String   @unique
   name      String?
   role      UserRole @default(ADMIN)
+  isActive  Boolean  @default(true)
+  invitedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

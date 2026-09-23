@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/auth";
+import { requestPasswordReset } from "@/app/actions/auth";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,8 +22,16 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/admin";
   const forbidden = searchParams.get("error") === "forbidden";
-  const [error, setError] = useState<string | null>(forbidden ? "That account does not have admin access." : null);
+  const disabled = searchParams.get("error") === "disabled";
+  const initialErr = forbidden
+    ? "That account does not have admin access."
+    : disabled
+      ? "That account has been disabled. Contact an admin."
+      : null;
+  const [error, setError] = useState<string | null>(initialErr);
+  const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [resetPending, setResetPending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -44,6 +53,27 @@ function LoginForm() {
       setError("Sign-in is unavailable — Supabase is not connected yet.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setError(null);
+    setInfo(null);
+    const emailInput = document.getElementById("email") as HTMLInputElement | null;
+    const email = emailInput?.value?.trim() ?? "";
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Enter your email above first, then click Forgot password.");
+      return;
+    }
+    setResetPending(true);
+    try {
+      const res = await requestPasswordReset(email);
+      if (!res.ok) setError(res.error);
+      else setInfo(res.message ?? "Password reset email sent — check your inbox.");
+    } catch {
+      setError("Could not send reset email.");
+    } finally {
+      setResetPending(false);
     }
   }
 
@@ -73,10 +103,22 @@ function LoginForm() {
               <Input id="password" name="password" type="password" required autoComplete="current-password" />
             </div>
             <FieldError message={error} />
+            {info && <p className="text-xs font-semibold text-emerald-700">{info}</p>}
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Signing in…" : "Sign In"}
             </Button>
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={resetPending}
+              className="w-full text-center text-xs font-semibold text-steel-600 hover:underline disabled:opacity-50"
+            >
+              {resetPending ? "Sending reset email…" : "Forgot password?"}
+            </button>
           </form>
+          <p className="mt-4 text-center text-xs text-slate-500">
+            New admin? Ask an existing admin to invite you — you’ll set your own password via email.
+          </p>
         </CardContent>
       </Card>
     </div>

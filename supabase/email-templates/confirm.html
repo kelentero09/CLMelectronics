@@ -1,0 +1,31 @@
+<!-- CLM Electronics — Confirm Signup (if email confirmations are enabled)
+  Dashboard: Authentication → Email Templates → Confirm signup
+  Subject: Confirm your CLM Admin email
+-->
+<div style="margin:0;padding:0;background-color:#f1f5f9;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f1f5f9;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+        <tr><td style="background:#0B1D33;padding:20px 28px;">
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:800;color:#ffffff;">CLM Electronics Engineering Services</div>
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;margin-top:4px;letter-spacing:0.4px;text-transform:uppercase;">Email Confirmation</div>
+        </td></tr>
+        <tr><td style="padding:28px 28px 8px 28px;">
+          <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:20px;color:#0B1D33;">Confirm your email</h1>
+          <p style="margin:12px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#334155;">
+            Confirm <strong>{{ .Email }}</strong> to finish setting up your CLM Admin access.
+          </p>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#0B1D33;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;">Confirm Email</a>
+          </div>
+          <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;word-break:break-all;">
+            <a href="{{ .ConfirmationURL }}" style="color:#0B1D33;">{{ .ConfirmationURL }}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:16px 28px 24px 28px;border-top:1px solid #e2e8f0;">
+          <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;">If you didn’t create this account, ignore this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</div>

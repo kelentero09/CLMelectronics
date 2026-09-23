@@ -72,8 +72,44 @@ pnpm start
 - `/admin` (after login) shows counts; add/edit/publish a product; upload an image.
 - Submit a test inquiry from a product page → appears in `/admin/inquiries` → mark COMPLETED.
 
-## 7. Before launch
+## 7. Email branding (make invites say CLM, not Supabase Auth)
+
+New admin invites and password resets send email via Supabase Auth. By default the envelope is
+`Supabase Auth <noreply@mail.supabase.io>` and the body says “Supabase”. Make it CLM-branded:
+
+**A. Set Site URL & redirects** — Authentication → URL Configuration:
+
+- `Site URL` = your production URL (e.g. `https://clm.yourdomain.com`) — for local dev `http://localhost:3000`
+- `Additional Redirect URLs` = `http://localhost:3000/auth/callback, https://clm.yourdomain.com/auth/callback, https://clm.yourdomain.com/auth/update-password`
+- Save.
+
+**B. Brand the templates** — Authentication → Email Templates (or run the script):
+
+Manual (30 seconds):
+1. Open `supabase/email-templates/invite.html` in this repo (same for `recovery.html`, `confirm.html`, `magiclink.html`).
+2. Dashboard → Authentication → Email Templates → click each template → set **Subject** as noted in the HTML comment at the top of the file → paste the **entire HTML file** into **Message body** → Save.
+
+Automated (requires a Supabase Personal Access Token at https://supabase.com/dashboard/account/tokens):
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_xxx SUPABASE_PROJECT_REF=wzodnqlugamddmotlrty node scripts/apply-email-templates.mjs
+# without a token it prints the manual steps above
+```
+
+What this changes:
+- Invite: subject `You’ve been invited to CLM Admin — set your password`, body shows CLM navy header, company address/phones, button `Accept Invite & Set Password` linked to `{{ .ConfirmationURL }}`.
+- Recovery: subject `Reset your CLM Admin password`, same branding, button `Reset Password`.
+- No code change needed — `app/actions/users.ts:inviteUser` and `app/actions/auth.ts:requestPasswordReset` already use `redirectTo = {{SITE_URL}}/auth/callback` so the button lands on CLM.
+
+**C. Sender name / custom SMTP (optional but recommended for production)** — to change the `From:` line from `noreply@mail.supabase.io`:
+
+- Authentication → SMTP Settings → enable **Custom SMTP** (e.g. Resend, SendGrid, AWS SES).
+- Set `Sender name: CLM Electronics` and `Sender email: noreply@clm-electronics.com` (must be a verified domain in your SMTP provider).
+- Save. Without custom SMTP the body is still fully CLM-branded; only the envelope sender remains `@mail.supabase.io` (Supabase default).
+
+Verify: invite a test user at `/admin/users` → email should arrive with CLM header, navy `#0B1D33` bar, footer `#9 Bayabas St…`, and no mention of “Supabase Auth” in subject/body. Sender name will be `CLM Electronics` once SMTP is set.
+
+## 8. Before launch
 
 - Replace or delete ALL `[SAMPLE]` products with CLM-approved content.
-- Set `NEXT_PUBLIC_SITE_URL` to the production URL.
+- Set `NEXT_PUBLIC_SITE_URL` to the production URL (required so invite/reset links point to your domain, not localhost).
 - Run the §20 forbidden-terms grep (see spec) and confirm zero commerce hits.

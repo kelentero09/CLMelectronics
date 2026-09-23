@@ -82,6 +82,11 @@ export const boardRepairSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+export const inviteUserSchema = z.object({
+  email: z.string().email().max(200).transform((v) => v.trim().toLowerCase()),
+  name: z.string().max(120).nullable().optional(),
+});
+
 export function firstIssueMessage(error: z.ZodError): string {
   const issue = error.issues[0];
   if (!issue) return "Invalid input";
