@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/auth";
@@ -32,6 +32,7 @@ function LoginForm() {
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [resetPending, setResetPending] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,7 +57,14 @@ function LoginForm() {
     }
   }
 
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const id = setInterval(() => setResetCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resetCooldown]);
+
   async function handleForgotPassword() {
+    if (resetCooldown > 0) return;
     setError(null);
     setInfo(null);
     const emailInput = document.getElementById("email") as HTMLInputElement | null;
@@ -68,8 +76,13 @@ function LoginForm() {
     setResetPending(true);
     try {
       const res = await requestPasswordReset(email);
-      if (!res.ok) setError(res.error);
-      else setInfo(res.message ?? "Password reset email sent — check your inbox.");
+      if (!res.ok) {
+        setError(res.error);
+        if (/rate limit/i.test(res.error)) setResetCooldown(60);
+      } else {
+        setInfo(res.message ?? "Password reset email sent — check your inbox.");
+        setResetCooldown(60);
+      }
     } catch {
       setError("Could not send reset email.");
     } finally {
@@ -110,10 +123,10 @@ function LoginForm() {
             <button
               type="button"
               onClick={handleForgotPassword}
-              disabled={resetPending}
+              disabled={resetPending || resetCooldown > 0}
               className="w-full text-center text-xs font-semibold text-steel-600 hover:underline disabled:opacity-50"
             >
-              {resetPending ? "Sending reset email…" : "Forgot password?"}
+              {resetPending ? "Sending reset email…" : resetCooldown > 0 ? `Wait ${resetCooldown}s before retrying` : "Forgot password?"}
             </button>
           </form>
           <p className="mt-4 text-center text-xs text-slate-500">

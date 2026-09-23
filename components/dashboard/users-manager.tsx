@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Input, Label, FieldError } from "@/components/ui/form";
@@ -23,9 +23,36 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [inviteCooldown, setInviteCooldown] = useState(0);
+  const [resendCooldowns, setResendCooldowns] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (inviteCooldown <= 0) return;
+    const id = setInterval(() => setInviteCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [inviteCooldown]);
+
+  useEffect(() => {
+    const hasActive = Object.values(resendCooldowns).some((v) => v > 0);
+    if (!hasActive) return;
+    const id = setInterval(() => {
+      setResendCooldowns((prev) => {
+        const next: Record<string, number> = {};
+        let changed = false;
+        for (const [k, v] of Object.entries(prev)) {
+          const nv = Math.max(0, v - 1);
+          if (nv !== v) changed = true;
+          if (nv > 0) next[k] = nv;
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resendCooldowns]);
 
   async function handleInvite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (inviteCooldown > 0) return;
     setError(null);
     setSuccess(null);
     const form = new FormData(e.currentTarget);
@@ -34,25 +61,32 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
       if (!res.ok) {
         setError(res.error);
         toast.error(res.error);
+        if (/rate limit/i.test(res.error)) setInviteCooldown(60);
       } else {
         setSuccess(res.message ?? "Invite sent.");
         toast.success(res.message ?? "Invite sent.");
         (e.target as HTMLFormElement).reset();
         router.refresh();
+        setInviteCooldown(60);
       }
     });
   }
 
   function handleResend(email: string) {
+    if ((resendCooldowns[email] ?? 0) > 0) return;
     setError(null);
     startTransition(async () => {
       const res = await resendInvite(email);
       if (!res.ok) {
         setError(res.error);
         toast.error(res.error);
+        if (/rate limit/i.test(res.error)) {
+          setResendCooldowns((p) => ({ ...p, [email]: 60 }));
+        }
       } else {
         toast.success(res.message ?? "Invite resent.");
         router.refresh();
+        setResendCooldowns((p) => ({ ...p, [email]: 60 }));
       }
     });
   }
@@ -101,8 +135,8 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
               <Label htmlFor="name">Name (optional)</Label>
               <Input id="name" name="name" type="text" placeholder="Jane Doe" maxLength={120} />
             </div>
-            <Button type="submit" disabled={pending} className="sm:mb-0">
-              {pending ? "Sending…" : "Send Invite"}
+            <Button type="submit" disabled={pending || inviteCooldown > 0} className="sm:mb-0">
+              {pending ? "Sending…" : inviteCooldown > 0 ? `Wait ${inviteCooldown}s` : "Send Invite"}
             </Button>
           </form>
           <FieldError message={error} />
@@ -161,11 +195,17 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={pending || !u.isActive}
+                            disabled={pending || !u.isActive || (resendCooldowns[u.email] ?? 0) > 0}
                             onClick={() => handleResend(u.email)}
-                            title={!u.isActive ? "Enable user first" : "Resend invite email"}
+                            title={
+                              !u.isActive
+                                ? "Enable user first"
+                                : (resendCooldowns[u.email] ?? 0) > 0
+                                  ? `Wait ${resendCooldowns[u.email]}s before resending`
+                                  : "Resend invite email"
+                            }
                           >
-                            Resend
+                            {(resendCooldowns[u.email] ?? 0) > 0 ? `Wait ${resendCooldowns[u.email]}s` : "Resend"}
                           </Button>
                           <Button
                             type="button"

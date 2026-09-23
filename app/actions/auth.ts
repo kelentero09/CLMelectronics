@@ -5,6 +5,14 @@ import { createSupabaseServerClient } from "@/lib/auth";
 
 export type AuthActionResult = { ok: true; message?: string } | { ok: false; error: string };
 
+function isEmailRateLimitMessage(msg: string): boolean {
+  return /rate limit|too many requests|over_email|email.*limit|429/i.test(msg);
+}
+
+function rateLimitMessage(): string {
+  return "Email rate limit exceeded — Supabase’s built-in mailer allows ~3–4 emails/hour per address (≈30/hour per project). Wait 2–5 minutes and try again. For production, set up Custom SMTP in Supabase Dashboard → Auth → SMTP (see SUPABASE_SETUP.md §7) to lift this limit.";
+}
+
 function getSiteUrl(): string {
   const url = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (url) return url.replace(/\/$/, "");
@@ -40,7 +48,7 @@ export async function requestPasswordReset(emailRaw: string): Promise<AuthAction
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) {
-      // Surface real Supabase errors (rate limit, etc.)
+      if (isEmailRateLimitMessage(error.message)) return { ok: false, error: rateLimitMessage() };
       return { ok: false, error: error.message };
     }
     return { ok: true, message: "Password reset email sent — check your inbox." };

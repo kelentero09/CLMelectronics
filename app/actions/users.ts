@@ -18,8 +18,18 @@ function getSiteUrl() {
   return "http://localhost:3000";
 }
 
+function isEmailRateLimitMessage(msg: string): boolean {
+  return /rate limit|too many requests|over_email|email.*limit|429/i.test(msg);
+}
+
+function rateLimitMessage(): string {
+  return "Email rate limit exceeded — Supabase’s built-in mailer allows ~3–4 emails/hour per address (≈30/hour per project). Wait 2–5 minutes and try again. For production, set up Custom SMTP in Supabase Dashboard → Auth → SMTP (see SUPABASE_SETUP.md §7) to lift this limit.";
+}
+
 function fail(error: unknown): UserActionResult {
   console.error("[users action]", error);
+  const msg = error instanceof Error ? error.message : String(error);
+  if (isEmailRateLimitMessage(msg)) return { ok: false, error: rateLimitMessage() };
   if (error instanceof Error && error.message && !/prisma|database|connect|supabase/i.test(error.message)) {
     return { ok: false, error: error.message };
   }
@@ -56,6 +66,9 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
     });
 
     if (inviteError) {
+      if (isEmailRateLimitMessage(inviteError.message)) {
+        return { ok: false, error: rateLimitMessage() };
+      }
       // If user already exists in Supabase Auth, fall back to generate recovery link
       if (/already exists|already registered/i.test(inviteError.message)) {
         const { error: linkError } = await supabase.auth.admin.generateLink({
@@ -63,7 +76,10 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
           email,
           options: { redirectTo },
         });
-        if (linkError) throw new Error(linkError.message);
+        if (linkError) {
+          if (isEmailRateLimitMessage(linkError.message)) return { ok: false, error: rateLimitMessage() };
+          throw new Error(linkError.message);
+        }
         // Still upsert Prisma row if missing
         await prisma.user.upsert({
           where: { email },
@@ -106,13 +122,17 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
 
     const { error } = await supabase.auth.admin.inviteUserByEmail(email, { redirectTo });
     if (error) {
+      if (isEmailRateLimitMessage(error.message)) return { ok: false, error: rateLimitMessage() };
       // Fallback to recovery link
       const { error: linkError } = await supabase.auth.admin.generateLink({
         type: "recovery",
         email,
         options: { redirectTo },
       });
-      if (linkError) throw new Error(linkError.message);
+      if (linkError) {
+        if (isEmailRateLimitMessage(linkError.message)) return { ok: false, error: rateLimitMessage() };
+        throw new Error(linkError.message);
+      }
     }
 
     await prisma.user.update({ where: { email }, data: { invitedAt: new Date() } });
