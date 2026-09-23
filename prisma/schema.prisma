@@ -42,15 +42,18 @@ enum InquiryStatus {
 
 // Application-level authorization (Supabase Auth owns credentials;
 // this table stores only the role, linked by email).
+// inviteToken is for pure-Postgres invite flow (no Supabase email) — used by /auth/accept-invite
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  role      UserRole @default(ADMIN)
-  isActive  Boolean  @default(true)
-  invitedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String?
+  role                  UserRole  @default(ADMIN)
+  isActive              Boolean   @default(true)
+  invitedAt             DateTime?
+  inviteToken           String?   @unique
+  inviteTokenExpiresAt  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@map("users")
 }

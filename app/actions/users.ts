@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
+import { randomBytes } from "crypto";
 import { createSupabaseServiceClient } from "@/lib/auth";
 import { inviteUserSchema, firstIssueMessage } from "@/lib/validators";
-import { sendMail, buildInviteHtml, buildRecoveryHtml, isEmailConfigured } from "@/lib/email";
+import { sendMail, buildInviteHtml, isEmailConfigured } from "@/lib/email";
 
 export type UserActionResult = { ok: true; message?: string; inviteLink?: string } | { ok: false; error: string };
 
@@ -69,83 +70,33 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
     const email = parsed.data.email;
     const name = parsed.data.name?.trim() || null;
 
-    // Prevent duplicate invite — but allow re-invite if inactive/disabled
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing && existing.isActive) {
       return { ok: false, error: "A user with this email already exists." };
     }
 
-    const supabase = createSupabaseServiceClient();
     const siteUrl = await getSiteUrl();
-    const redirectTo = `${siteUrl}/auth/callback?next=/auth/update-password`;
-
-    // Bypass Supabase's rate-limited mailer: generate link server-side and send via free Node mailer (Nodemailer)
-    // If SMTP_* not set, we still generate the link and return it for manual copy (zero cost, no external service).
-    const { data: linkData, error: genError } = await supabase.auth.admin.generateLink({
-      type: "invite",
-      email,
-      options: { redirectTo, data: name ? { name } : undefined },
-    });
-
-    if (genError) {
-      // If invite link fails because user already exists, fall back to recovery link
-      if (/already exists|already registered/i.test(genError.message)) {
-        const { data: recData, error: recError } = await supabase.auth.admin.generateLink({
-          type: "recovery",
-          email,
-          options: { redirectTo },
-        });
-        if (recError) {
-          if (isEmailRateLimitMessage(recError.message)) return { ok: false, error: rateLimitMessage() };
-          throw new Error(recError.message);
-        }
-        const actionLink = (recData as unknown as { properties?: { action_link?: string } })?.properties?.action_link || (recData as unknown as { action_link?: string })?.action_link;
-        if (actionLink) {
-          const html = buildRecoveryHtml(actionLink, email, siteUrl);
-          const sent = await sendMail({ to: email, subject: "Reset your CLM Admin password", html });
-          await prisma.user.upsert({
-            where: { email },
-            update: { name: name ?? undefined, isActive: true, invitedAt: new Date() },
-            create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date() },
-          });
-          revalidatePath("/admin/users");
-          if (!sent.ok && !isEmailConfigured()) {
-            return { ok: true, message: "Recovery link generated (email not configured — copy link below).", inviteLink: actionLink };
-          }
-          if (!sent.ok) return { ok: false, error: sent.error };
-          return { ok: true, message: "Recovery email sent via Node mailer." };
-        }
-        await prisma.user.upsert({
-          where: { email },
-          update: { name: name ?? undefined, isActive: true, invitedAt: new Date() },
-          create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date() },
-        });
-        revalidatePath("/admin/users");
-        return { ok: true, message: "User exists — recovery link generated." };
-      }
-      if (isEmailRateLimitMessage(genError.message)) return { ok: false, error: rateLimitMessage() };
-      throw new Error(genError.message);
-    }
-
-    const actionLink = (linkData as unknown as { properties?: { action_link?: string } })?.properties?.action_link || (linkData as unknown as { action_link?: string })?.action_link;
-    if (!actionLink) throw new Error("Failed to generate invite link");
-
-    const html = buildInviteHtml(actionLink, email, siteUrl);
-    const sent = await sendMail({ to: email, subject: "You’ve been invited to CLM Admin — set your password", html });
+    // Pure Postgres token — no Supabase generateLink, no Supabase email, no rate limit
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.user.upsert({
       where: { email },
-      update: { name: name ?? undefined, isActive: true, invitedAt: new Date() },
-      create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date() },
+      update: { name: name ?? undefined, isActive: true, invitedAt: new Date(), inviteToken: token, inviteTokenExpiresAt: expiresAt },
+      create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date(), inviteToken: token, inviteTokenExpiresAt: expiresAt },
     });
 
-    console.log(`[users] ${currentUser.email} invited ${email} via Node mailer (configured=${isEmailConfigured()})`);
+    const inviteLink = `${siteUrl}/auth/accept-invite?token=${token}`;
+    const html = buildInviteHtml(inviteLink, email, siteUrl);
+    const sent = await sendMail({ to: email, subject: "You’ve been invited to CLM Admin — set your password", html });
+
+    console.log(`[users] ${currentUser.email} invited ${email} via Postgres token (configured=${isEmailConfigured()})`);
     revalidatePath("/admin/users");
     if (!sent.ok && !isEmailConfigured()) {
-      return { ok: true, message: "Invite link generated (email not configured — copy link below). Set SMTP_* in .env to auto-send.", inviteLink: actionLink };
+      return { ok: true, message: "Invite link generated (email not configured — copy link below). Set SMTP_* in .env to auto-send.", inviteLink };
     }
     if (!sent.ok) return { ok: false, error: sent.error };
-    return { ok: true, message: "Invite sent via Node mailer — no Supabase rate limit." };
+    return { ok: true, message: "Invite sent via Node mailer" };
   } catch (e) {
     return fail(e);
   }
@@ -161,55 +112,18 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
     if (!appUser) return { ok: false, error: "User not found" };
     if (!appUser.isActive) return { ok: false, error: "User is disabled — enable first." };
 
-    const supabase = createSupabaseServiceClient();
     const siteUrl = await getSiteUrl();
-    const redirectTo = `${siteUrl}/auth/callback?next=/auth/update-password`;
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await prisma.user.update({ where: { email }, data: { invitedAt: new Date(), inviteToken: token, inviteTokenExpiresAt: expiresAt } });
 
-    // Bypass Supabase mailer: generate link + Node mailer
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: "invite",
-      email,
-      options: { redirectTo },
-    });
-    let actionLink: string | undefined;
-    if (error) {
-      if (isEmailRateLimitMessage(error.message)) return { ok: false, error: rateLimitMessage() };
-      // fallback to recovery
-      const { data: recData, error: recError } = await supabase.auth.admin.generateLink({
-        type: "recovery",
-        email,
-        options: { redirectTo },
-      });
-      if (recError) {
-        if (isEmailRateLimitMessage(recError.message)) return { ok: false, error: rateLimitMessage() };
-        throw new Error(recError.message);
-      }
-      actionLink = (recData as unknown as { properties?: { action_link?: string } })?.properties?.action_link || (recData as unknown as { action_link?: string })?.action_link;
-      if (actionLink) {
-        const html = buildRecoveryHtml(actionLink, email, siteUrl);
-        const sent = await sendMail({ to: email, subject: "Reset your CLM Admin password", html });
-        await prisma.user.update({ where: { email }, data: { invitedAt: new Date() } });
-        revalidatePath("/admin/users");
-        if (!sent.ok && !isEmailConfigured()) return { ok: true, message: "Link generated (email not configured — copy below).", inviteLink: actionLink };
-        if (!sent.ok) return { ok: false, error: sent.error };
-        return { ok: true, message: "Invite resent via Node mailer." };
-      }
-    } else {
-      actionLink = (data as unknown as { properties?: { action_link?: string } })?.properties?.action_link || (data as unknown as { action_link?: string })?.action_link;
-      if (actionLink) {
-        const html = buildInviteHtml(actionLink, email, siteUrl);
-        const sent = await sendMail({ to: email, subject: "You’ve been invited to CLM Admin — set your password", html });
-        await prisma.user.update({ where: { email }, data: { invitedAt: new Date() } });
-        revalidatePath("/admin/users");
-        if (!sent.ok && !isEmailConfigured()) return { ok: true, message: "Link generated (email not configured — copy below).", inviteLink: actionLink };
-        if (!sent.ok) return { ok: false, error: sent.error };
-        return { ok: true, message: "Invite resent via Node mailer." };
-      }
-    }
-
-    await prisma.user.update({ where: { email }, data: { invitedAt: new Date() } });
+    const inviteLink = `${siteUrl}/auth/accept-invite?token=${token}`;
+    const html = buildInviteHtml(inviteLink, email, siteUrl);
+    const sent = await sendMail({ to: email, subject: "You’ve been invited to CLM Admin — set your password", html });
     revalidatePath("/admin/users");
-    return { ok: true, message: "Invite resent." };
+    if (!sent.ok && !isEmailConfigured()) return { ok: true, message: "Invite link generated (email not configured — copy below).", inviteLink };
+    if (!sent.ok) return { ok: false, error: sent.error };
+    return { ok: true, message: "Invite resent via Node mailer" };
   } catch (e) {
     return fail(e);
   }

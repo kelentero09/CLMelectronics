@@ -143,7 +143,7 @@ export function buildInviteHtml(link: string, email: string, siteUrl: string): s
           </div>
           <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;">
             If the button doesn’t work, copy this link:<br/>
-            <a href="${link}" style="color:#0B1D33;word-break:break-all;">${link}</a><br/><br/>You’ll be redirected to ${siteUrl}/auth/callback then to CLM Admin. After setting your password, sign in at ${siteUrl}/login.
+            <a href="${link}" style="color:#0B1D33;word-break:break-all;">${link}</a><br/><br/>You’ll set your password on ${siteUrl} (no Supabase link), then sign in at ${siteUrl}/login.
           </p>`;
   return wrapHtml("Admin Access", body);
 }
