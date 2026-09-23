@@ -10,10 +10,16 @@ import { sendMail, buildInviteHtml, buildRecoveryHtml, isEmailConfigured } from 
 export type UserActionResult = { ok: true; message?: string; inviteLink?: string } | { ok: false; error: string };
 
 function getSiteUrl() {
-  const url = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (url) return url.replace(/\/$/, "");
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (raw) return raw.replace(/\/$/, "");
+  // Vercel provides VERCEL_URL (e.g. clm-xxx.vercel.app) and VERCEL_PROJECT_PRODUCTION_URL
+  const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercelUrl) {
+    const withProto = vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+    return withProto.replace(/\/$/, "");
+  }
   if (process.env.NODE_ENV === "production") {
-    console.warn("[getSiteUrl] NEXT_PUBLIC_SITE_URL not set — invite links will use localhost fallback");
+    console.warn("[getSiteUrl] NEXT_PUBLIC_SITE_URL not set — invite links will use localhost fallback. Set it to your Vercel URL (e.g. https://clm-xxx.vercel.app) in Vercel env and redeploy.");
   }
   return "http://localhost:3000";
 }

@@ -15,10 +15,15 @@ function rateLimitMessage(): string {
 }
 
 function getSiteUrl(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (url) return url.replace(/\/$/, "");
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (raw) return raw.replace(/\/$/, "");
+  const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercelUrl) {
+    const withProto = vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+    return withProto.replace(/\/$/, "");
+  }
   if (process.env.NODE_ENV === "production") {
-    console.warn("[getSiteUrl] NEXT_PUBLIC_SITE_URL not set — recovery links will use localhost fallback");
+    console.warn("[getSiteUrl] NEXT_PUBLIC_SITE_URL not set — recovery links will use localhost fallback. Set NEXT_PUBLIC_SITE_URL to your Vercel URL and redeploy.");
   }
   return "http://localhost:3000";
 }
