@@ -9,18 +9,32 @@ import { sendMail, buildInviteHtml, buildRecoveryHtml, isEmailConfigured } from 
 
 export type UserActionResult = { ok: true; message?: string; inviteLink?: string } | { ok: false; error: string };
 
-function getSiteUrl() {
+async function getSiteUrl(): Promise<string> {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const isLocalhostRaw = raw === "http://localhost:3000" || raw === "https://localhost:3000" || raw === "http://localhost:3000/" || raw === "https://localhost:3000/";
+  // If user explicitly set a non-localhost URL, honor it (Vercel prod or Hostinger)
+  if (raw && !isLocalhostRaw) return raw.replace(/\/$/, "");
+  // In production/Vercel, localhost is wrong — try to infer real host
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    try {
+      const { headers } = await import("next/headers");
+      const h = await headers();
+      const host = h.get("host");
+      const proto = h.get("x-forwarded-proto") || "https";
+      if (host && !host.includes("localhost")) {
+        return `${proto}://${host}`.replace(/\/$/, "");
+      }
+    } catch {}
+    const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+    if (vercelUrl) {
+      const withProto = vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+      if (!withProto.includes("localhost")) return withProto.replace(/\/$/, "");
+    }
+    if (isLocalhostRaw) {
+      console.warn(`[getSiteUrl] NEXT_PUBLIC_SITE_URL is localhost but running on Vercel — using Vercel host if available. Set NEXT_PUBLIC_SITE_URL to https://<your-vercel>.vercel.app in Vercel env and redeploy.`);
+    }
+  }
   if (raw) return raw.replace(/\/$/, "");
-  // Vercel provides VERCEL_URL (e.g. clm-xxx.vercel.app) and VERCEL_PROJECT_PRODUCTION_URL
-  const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-  if (vercelUrl) {
-    const withProto = vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
-    return withProto.replace(/\/$/, "");
-  }
-  if (process.env.NODE_ENV === "production") {
-    console.warn("[getSiteUrl] NEXT_PUBLIC_SITE_URL not set — invite links will use localhost fallback. Set it to your Vercel URL (e.g. https://clm-xxx.vercel.app) in Vercel env and redeploy.");
-  }
   return "http://localhost:3000";
 }
 
@@ -62,7 +76,7 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
     }
 
     const supabase = createSupabaseServiceClient();
-    const siteUrl = getSiteUrl();
+    const siteUrl = await getSiteUrl();
     const redirectTo = `${siteUrl}/auth/callback`;
 
     // Bypass Supabase's rate-limited mailer: generate link server-side and send via free Node mailer (Nodemailer)
@@ -148,7 +162,7 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
     if (!appUser.isActive) return { ok: false, error: "User is disabled — enable first." };
 
     const supabase = createSupabaseServiceClient();
-    const siteUrl = getSiteUrl();
+    const siteUrl = await getSiteUrl();
     const redirectTo = `${siteUrl}/auth/callback`;
 
     // Bypass Supabase mailer: generate link + Node mailer
