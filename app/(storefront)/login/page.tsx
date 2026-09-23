@@ -30,6 +30,7 @@ function LoginForm() {
       : null;
   const [error, setError] = useState<string | null>(initialErr);
   const [info, setInfo] = useState<string | null>(null);
+  const [recoveryLink, setRecoveryLink] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [resetPending, setResetPending] = useState(false);
   const [resetCooldown, setResetCooldown] = useState(0);
@@ -67,6 +68,7 @@ function LoginForm() {
     if (resetCooldown > 0) return;
     setError(null);
     setInfo(null);
+    setRecoveryLink(null);
     const emailInput = document.getElementById("email") as HTMLInputElement | null;
     const email = emailInput?.value?.trim() ?? "";
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -81,6 +83,9 @@ function LoginForm() {
         if (/rate limit/i.test(res.error)) setResetCooldown(60);
       } else {
         setInfo(res.message ?? "Password reset email sent — check your inbox.");
+        if ((res as unknown as { recoveryLink?: string }).recoveryLink) {
+          setRecoveryLink((res as unknown as { recoveryLink: string }).recoveryLink);
+        }
         setResetCooldown(60);
       }
     } catch {
@@ -117,6 +122,19 @@ function LoginForm() {
             </div>
             <FieldError message={error} />
             {info && <p className="text-xs font-semibold text-emerald-700">{info}</p>}
+            {recoveryLink && (
+              <div className="rounded border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-bold text-amber-900">No SMTP configured — copy reset link:</p>
+                <input readOnly value={recoveryLink} className="mt-2 w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs" />
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(recoveryLink)}
+                  className="mt-2 text-xs font-semibold text-amber-900 underline"
+                >
+                  Copy link
+                </button>
+              </div>
+            )}
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Signing in…" : "Sign In"}
             </Button>

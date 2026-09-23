@@ -23,6 +23,7 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteCooldown, setInviteCooldown] = useState(0);
   const [resendCooldowns, setResendCooldowns] = useState<Record<string, number>>({});
 
@@ -55,6 +56,7 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
     if (inviteCooldown > 0) return;
     setError(null);
     setSuccess(null);
+    setInviteLink(null);
     const form = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await inviteUser(form);
@@ -65,6 +67,9 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
       } else {
         setSuccess(res.message ?? "Invite sent.");
         toast.success(res.message ?? "Invite sent.");
+        if ((res as unknown as { inviteLink?: string }).inviteLink) {
+          setInviteLink((res as unknown as { inviteLink: string }).inviteLink);
+        }
         (e.target as HTMLFormElement).reset();
         router.refresh();
         setInviteCooldown(60);
@@ -84,6 +89,13 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
           setResendCooldowns((p) => ({ ...p, [email]: 60 }));
         }
       } else {
+        const link = (res as unknown as { inviteLink?: string }).inviteLink;
+        if (link) {
+          setInviteLink(link);
+          setSuccess(`Link ready for ${email} — copy below.`);
+        } else {
+          setSuccess(null);
+        }
         toast.success(res.message ?? "Invite resent.");
         router.refresh();
         setResendCooldowns((p) => ({ ...p, [email]: 60 }));
@@ -141,6 +153,25 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
           </form>
           <FieldError message={error} />
           {success && <p className="mt-2 text-xs font-semibold text-emerald-700">{success}</p>}
+          {inviteLink && (
+            <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs font-bold text-amber-900">No SMTP configured — copy this invite link manually (free, no email sent):</p>
+              <div className="mt-2 flex gap-2">
+                <input readOnly value={inviteLink} className="flex-1 rounded border border-amber-300 bg-white px-2 py-1.5 text-xs" />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteLink);
+                    toast.success("Link copied");
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+              <p className="mt-1 text-[11px] text-amber-800">Set SMTP_HOST/SMTP_USER/SMTP_PASS in .env to auto-send via Node mailer. Current: Supabase mailer bypassed.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

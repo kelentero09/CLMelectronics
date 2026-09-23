@@ -1,16 +1,17 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { createSupabaseServerClient } from "@/lib/auth";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/auth";
+import { sendMail, buildRecoveryHtml, isEmailConfigured } from "@/lib/email";
 
-export type AuthActionResult = { ok: true; message?: string } | { ok: false; error: string };
+export type AuthActionResult = { ok: true; message?: string; recoveryLink?: string } | { ok: false; error: string };
 
 function isEmailRateLimitMessage(msg: string): boolean {
   return /rate limit|too many requests|over_email|email.*limit|429/i.test(msg);
 }
 
 function rateLimitMessage(): string {
-  return "Email rate limit exceeded — Supabase’s built-in mailer allows ~3–4 emails/hour per address (≈30/hour per project). Wait 2–5 minutes and try again. For production, set up Custom SMTP in Supabase Dashboard → Auth → SMTP (see SUPABASE_SETUP.md §7) to lift this limit.";
+  return "Supabase Auth rate limit hit (generating recovery link). Wait a minute and try again.";
 }
 
 function getSiteUrl(): string {
@@ -42,16 +43,31 @@ export async function requestPasswordReset(emailRaw: string): Promise<AuthAction
       return { ok: false, error: "That account has been disabled. Contact an admin." };
     }
 
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseServiceClient();
     const siteUrl = getSiteUrl();
     const redirectTo = `${siteUrl}/auth/callback?next=/auth/update-password`;
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    // Bypass Supabase mailer: generate link + Node mailer (free, no Supabase quota)
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo },
+    });
     if (error) {
       if (isEmailRateLimitMessage(error.message)) return { ok: false, error: rateLimitMessage() };
       return { ok: false, error: error.message };
     }
-    return { ok: true, message: "Password reset email sent — check your inbox." };
+    const actionLink = (data as unknown as { properties?: { action_link?: string } })?.properties?.action_link || (data as unknown as { action_link?: string })?.action_link;
+    if (!actionLink) return { ok: false, error: "Failed to generate recovery link." };
+
+    const html = buildRecoveryHtml(actionLink, email, siteUrl);
+    const sent = await sendMail({ to: email, subject: "Reset your CLM Admin password", html });
+    if (!sent.ok && !isEmailConfigured()) {
+      // No SMTP — return link for manual copy (still bypasses Supabase mailer, zero cost)
+      return { ok: true, message: "Recovery link generated (email not configured — copy link below). Set SMTP_* in .env to auto-send.", recoveryLink: actionLink };
+    }
+    if (!sent.ok) return { ok: false, error: sent.error };
+    return { ok: true, message: "Password reset email sent via Node mailer — no Supabase rate limit." };
   } catch (e) {
     console.error("[requestPasswordReset]", e);
     return { ok: false, error: "Could not send reset email. Try again." };
