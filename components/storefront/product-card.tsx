@@ -31,9 +31,9 @@ function availabilityStyle(availability: string) {
 
 export function ProductImagePlaceholder({ referenceCode }: { referenceCode: string }) {
   return (
-    <div className="blueprint-grid flex h-full w-full flex-col items-center justify-center gap-1 bg-navy-900 p-3 text-center">
-      <p className="text-2xl font-bold tracking-wide text-white">CLM</p>
-      <p className="font-mono text-[10px] uppercase tracking-widest text-accent-400 sm:text-[11px]">
+    <div className="blueprint-grid flex h-full w-full flex-col items-center justify-center gap-1 bg-white p-3 text-center border border-slate-200">
+      <p className="text-2xl font-bold tracking-wide text-navy-900">CLM</p>
+      <p className="font-mono text-[10px] uppercase tracking-widest text-slate-600 sm:text-[11px]">
         {referenceCode}
       </p>
     </div>
@@ -47,7 +47,7 @@ export function ProductCard({ product }: { product: CardProduct }) {
   return (
     <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
       <Link href={`/products/${product.slug}`} className="block" aria-label={`View ${product.name}`}>
-        <div className="relative aspect-[4/3] overflow-hidden bg-navy-900">
+        <div className="relative aspect-[4/3] overflow-hidden bg-white border border-slate-200">
           {primary ? (
             <Image
               src={primary}
