@@ -9,17 +9,17 @@ import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES, validateImageFile } from "@/
 
 export const PRODUCT_IMAGES_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "product-images";
-export const WEBP_QUALITY = 80;
+export const WEBP_QUALITY = 75; // Reduced from 80 for better storage efficiency
 
 export { ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES };
 
 export async function convertToWebP(input: Buffer | File): Promise<Buffer> {
   const buffer = input instanceof File ? Buffer.from(await input.arrayBuffer()) : input;
   // Cap dimensions so cards/thumbnails never ship multi-megapixel originals:
-  // 1600px is plenty for the detail gallery while keeping files small.
+  // 1200px is sufficient for detail gallery while optimizing storage (reduced from 1600px)
   return sharp(buffer)
     .rotate()
-    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
     .webp({ quality: WEBP_QUALITY, effort: 4 })
     .toBuffer();
 }
