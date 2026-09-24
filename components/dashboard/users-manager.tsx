@@ -15,6 +15,7 @@ type UserRow = {
   role: string;
   isActive: boolean;
   invitedAt: string | null;
+  inviteAccepted: boolean;
   createdAt: string;
 };
 
@@ -209,10 +210,12 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
                         <Badge variant="default">{u.role}</Badge>
                       </td>
                       <td className="px-4 py-3">
-                        {u.isActive ? (
-                          <Badge variant="success">Active</Badge>
-                        ) : (
+                        {!u.isActive ? (
                           <Badge variant="warning">Disabled</Badge>
+                        ) : !u.inviteAccepted ? (
+                          <Badge variant="default">Pending</Badge>
+                        ) : (
+                          <Badge variant="success">Active</Badge>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-600">

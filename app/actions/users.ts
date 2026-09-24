@@ -82,8 +82,8 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
 
     await prisma.user.upsert({
       where: { email },
-      update: { name: name ?? undefined, isActive: true, invitedAt: new Date(), inviteToken: token, inviteTokenExpiresAt: expiresAt },
-      create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date(), inviteToken: token, inviteTokenExpiresAt: expiresAt },
+      update: { name: name ?? undefined, isActive: true, invitedAt: new Date(), inviteAccepted: false, inviteToken: token, inviteTokenExpiresAt: expiresAt },
+      create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date(), inviteAccepted: false, inviteToken: token, inviteTokenExpiresAt: expiresAt },
     });
 
     const inviteLink = `${siteUrl}/auth/accept-invite?token=${token}`;
@@ -115,7 +115,7 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
     const siteUrl = await getSiteUrl();
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await prisma.user.update({ where: { email }, data: { invitedAt: new Date(), inviteToken: token, inviteTokenExpiresAt: expiresAt } });
+    await prisma.user.update({ where: { email }, data: { invitedAt: new Date(), inviteAccepted: false, inviteToken: token, inviteTokenExpiresAt: expiresAt } });
 
     const inviteLink = `${siteUrl}/auth/accept-invite?token=${token}`;
     const html = buildInviteHtml(inviteLink, email, siteUrl);

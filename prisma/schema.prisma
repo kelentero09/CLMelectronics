@@ -50,6 +50,7 @@ model User {
   role                  UserRole  @default(ADMIN)
   isActive              Boolean   @default(true)
   invitedAt             DateTime?
+  inviteAccepted        Boolean   @default(false)
   inviteToken           String?   @unique
   inviteTokenExpiresAt  DateTime?
   createdAt             DateTime  @default(now())

@@ -40,6 +40,7 @@ export default async function AdminUsersPage() {
             role: u.role,
             isActive: u.isActive,
             invitedAt: u.invitedAt ? u.invitedAt.toISOString() : null,
+            inviteAccepted: u.inviteAccepted,
             createdAt: u.createdAt.toISOString(),
           }))}
           currentUserEmail={currentUser.email}

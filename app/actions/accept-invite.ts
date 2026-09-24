@@ -43,10 +43,10 @@ export async function acceptInvite(token: string, password: string): Promise<Acc
       if (createErr) return { ok: false, error: createErr.message };
     }
 
-    // Clear token so link is one-time
+    // Clear token so link is one-time and mark as accepted
     await prisma.user.update({
       where: { id: user.id },
-      data: { inviteToken: null, inviteTokenExpiresAt: null },
+      data: { inviteToken: null, inviteTokenExpiresAt: null, inviteAccepted: true },
     });
 
     return { ok: true };
