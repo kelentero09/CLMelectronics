@@ -282,7 +282,7 @@ export function UsersManager({
             </tbody>
           </table>
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} variant="admin" />
       </Card>
     </div>
   );

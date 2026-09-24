@@ -123,7 +123,7 @@ export default async function AdminRepairsPage({ searchParams }: { searchParams:
             )}
           </tbody>
         </DataTable>
-        <Pagination currentPage={page} totalPages={totalPages} baseUrl="/admin/repairs" searchParams={{ q, station: stationFilter }} />
+        <Pagination currentPage={page} totalPages={totalPages} baseUrl="/admin/repairs" searchParams={{ q, station: stationFilter }} variant="admin" />
       </div>
     </div>
   );

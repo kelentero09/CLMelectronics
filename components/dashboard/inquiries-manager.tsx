@@ -90,7 +90,7 @@ export function InquiriesManager({
     <>
       {cards}
       <div className="md:hidden">
-        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} searchParams={searchParams} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} searchParams={searchParams} variant="admin" />
       </div>
       <div className="hidden md:block">
         <DataTable aria-label="Inquiries">
@@ -135,7 +135,7 @@ export function InquiriesManager({
             )}
           </tbody>
         </DataTable>
-        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} searchParams={searchParams} />
+        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} searchParams={searchParams} variant="admin" />
       </div>
     </>
   );

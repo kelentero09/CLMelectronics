@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/storefront/empty-state";
 import { Reveal } from "@/components/storefront/reveal";
 import { Input } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // Dynamic (searchParams) but fast: filter facets come from the 5-minute
@@ -251,25 +252,19 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             </div>
           )}
 
-          {totalPages > 1 && (
-            <nav aria-label="Pagination" className="flex items-center justify-center gap-2 pt-4">
-              <Link
-                href={buildLink(base, { page: String(Math.max(1, page - 1)) })}
-                aria-disabled={page <= 1}
-                className={buttonVariants({ variant: "outline", size: "sm", className: page <= 1 ? "pointer-events-none opacity-50" : "" })}
-              >
-                Prev
-              </Link>
-              <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
-              <Link
-                href={buildLink(base, { page: String(Math.min(totalPages, page + 1)) })}
-                aria-disabled={page >= totalPages}
-                className={buttonVariants({ variant: "outline", size: "sm", className: page >= totalPages ? "pointer-events-none opacity-50" : "" })}
-              >
-                Next
-              </Link>
-            </nav>
-          )}
+          <Pagination 
+            currentPage={page} 
+            totalPages={totalPages} 
+            baseUrl="/products" 
+            searchParams={{ 
+              q, 
+              category: categoryParam, 
+              manufacturer: manufacturerParam, 
+              condition, 
+              availability 
+            }}
+            variant="storefront"
+          />
         </div>
       </div>
     </div>

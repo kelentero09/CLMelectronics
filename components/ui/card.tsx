@@ -53,9 +53,10 @@ interface PaginationProps {
   totalPages: number;
   baseUrl: string;
   searchParams?: Record<string, string | undefined>;
+  variant?: "admin" | "storefront";
 }
 
-export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {} }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}, variant = "admin" }: PaginationProps) {
   const buildUrl = (page: number) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(searchParams)) {
@@ -95,18 +96,32 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
 
   if (totalPages <= 1) return null;
 
+  const containerClasses = variant === "storefront" 
+    ? "flex flex-wrap items-center justify-center gap-2 pt-4"
+    : "flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3";
+
+  const pageTextClasses = variant === "storefront"
+    ? "text-sm text-slate-600"
+    : "text-xs text-slate-600";
+
+  const buttonClasses = variant === "storefront"
+    ? "rounded border px-3 py-2 text-sm font-medium"
+    : "rounded border px-2.5 py-1 text-xs font-medium";
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-xs text-slate-600">
-        Page {currentPage} of {totalPages}
-      </p>
+    <div className={containerClasses}>
+      {variant === "admin" && (
+        <p className={pageTextClasses}>
+          Page {currentPage} of {totalPages}
+        </p>
+      )}
       <div className="flex gap-1">
         <a
           href={buildUrl(currentPage - 1)}
           className={cn(
-            "rounded border px-2.5 py-1 text-xs font-medium",
+            buttonClasses,
             currentPage === 1
-              ? "border-slate-200 bg-slate-100 text-slate-400"
+              ? "border-slate-200 bg-slate-100 text-slate-400 pointer-events-none"
               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
           )}
           aria-disabled={currentPage === 1}
@@ -119,7 +134,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
               key={i}
               href={buildUrl(page)}
               className={cn(
-                "rounded border px-2.5 py-1 text-xs font-medium",
+                buttonClasses,
                 page === currentPage
                   ? "border-navy-900 bg-navy-900 text-white"
                   : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -136,9 +151,9 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
         <a
           href={buildUrl(currentPage + 1)}
           className={cn(
-            "rounded border px-2.5 py-1 text-xs font-medium",
+            buttonClasses,
             currentPage === totalPages
-              ? "border-slate-200 bg-slate-100 text-slate-400"
+              ? "border-slate-200 bg-slate-100 text-slate-400 pointer-events-none"
               : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
           )}
           aria-disabled={currentPage === totalPages}

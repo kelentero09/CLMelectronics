@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ADMIN_PAGE_SIZE } from "@/lib/catalog";
 import { Input, Select } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge, DataTable } from "@/components/ui/card";
+import { Badge, DataTable, Pagination } from "@/components/ui/card";
 import { PublishToggle, DeleteRestoreButtons } from "@/components/dashboard/product-row-actions";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +66,14 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     const s = params.toString();
     return s ? `/admin/products?${s}` : "/admin/products";
   };
+
+  const paginationParams: Record<string, string | undefined> = {
+    q,
+    category: sp.category,
+    availability: sp.availability,
+    published: sp.published,
+  };
+  if (showTrashed) paginationParams.trashed = "1";
 
   return (
     <div>
@@ -141,13 +149,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         </DataTable>
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-2 text-sm">
-          <Link href={qs({ page: String(Math.max(1, page - 1)) })} className={buttonVariants({ variant: "outline", size: "sm", className: page <= 1 ? "pointer-events-none opacity-50" : "" })}>Prev</Link>
-          <span className="text-slate-500">Page {page} of {totalPages}</span>
-          <Link href={qs({ page: String(Math.min(totalPages, page + 1)) })} className={buttonVariants({ variant: "outline", size: "sm", className: page >= totalPages ? "pointer-events-none opacity-50" : "" })}>Next</Link>
-        </div>
-      )}
+      <Pagination 
+        currentPage={page} 
+        totalPages={totalPages} 
+        baseUrl="/admin/products" 
+        searchParams={paginationParams}
+        variant="admin"
+      />
     </div>
   );
 }
