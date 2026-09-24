@@ -181,8 +181,6 @@ export default async function StorageDashboardPage() {
           </Card>
 
         <StorageManager oldInquiryCount={stats.inquiries.oldCount} />
-
-        <StorageManager oldInquiryCount={stats.inquiries.oldCount} />
       </div>
     </div>
   );
