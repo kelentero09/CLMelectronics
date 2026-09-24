@@ -64,7 +64,9 @@ export function InquiriesManager({
               <Badge variant={statusVariant(inq.status)}>{inq.status}</Badge>
             </div>
             {inq.productRef && <p className="text-xs font-semibold text-steel-600">{inq.productRef}</p>}
-            <p className="whitespace-pre-line text-sm text-slate-600">{inq.message}</p>
+            <p className="whitespace-pre-line text-sm text-slate-600">
+              {inq.message.length > 100 ? inq.message.substring(0, 100) + "..." : inq.message}
+            </p>
             <p className="text-xs text-slate-400">
               {inq.email}{inq.phone ? ` • ${inq.phone}` : ""}{inq.company ? ` • ${inq.company}` : ""} ·{" "}
               {new Date(inq.createdAt).toLocaleString()}
@@ -113,7 +115,9 @@ export function InquiriesManager({
                   {inq.company && <span className="block text-slate-500">{inq.company}</span>}
                 </td>
                 <td className="max-w-[180px] px-3 py-2 text-xs text-steel-600">{inq.productRef ?? "General inquiry"}</td>
-                <td className="max-w-[320px] whitespace-pre-line px-3 py-2 text-xs text-slate-600">{inq.message}</td>
+                <td className="max-w-[320px] whitespace-pre-line px-3 py-2 text-xs text-slate-600">
+                  {inq.message.length > 100 ? inq.message.substring(0, 100) + "..." : inq.message}
+                </td>
                 <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-500">{new Date(inq.createdAt).toLocaleString()}</td>
                 <td className="whitespace-nowrap px-3 py-2">
                   <Select

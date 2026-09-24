@@ -55,18 +55,18 @@ export const categorySchema = z.object({
 
 const phoneSchema = z
   .string()
-  .max(30)
+  .max(20)
   .nullable()
   .optional()
-  .refine((v) => !v || /^[+()\-.\s\d]{7,30}$/.test(v), "Enter a valid phone number");
+  .refine((v) => !v || /^[+()\-.\s\d]{7,20}$/.test(v), "Enter a valid phone number");
 
 export const inquirySchema = z.object({
   productId: z.string().min(1).nullable().optional(),
-  name: z.string().min(2).max(120),
-  email: z.string().email().max(200),
+  name: z.string().min(2).max(50),
+  email: z.string().email().max(255),
   phone: phoneSchema,
-  company: z.string().max(200).nullable().optional(),
-  message: z.string().min(10).max(5000),
+  company: z.string().max(50).nullable().optional(),
+  message: z.string().min(10).max(500),
   website: z.string().max(200).nullable().optional(), // honeypot — must stay empty
 });
 

@@ -122,15 +122,14 @@ model Inquiry {
   id         String        @id @default(cuid())
   productId  String?
   product    Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productRef String?
-  name       String
-  email      String
-  phone      String?
-  company    String?
-  message    String        @db.Text
+  productRef String?       @db.VarChar(50)
+  name       String        @db.VarChar(50)
+  email      String        @db.VarChar(255)
+  phone      String?       @db.VarChar(20)
+  company    String?       @db.VarChar(50)
+  message    String        @db.VarChar(500)
   status     InquiryStatus @default(NEW)
   createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
 
   @@index([status, createdAt])
   @@map("inquiries")

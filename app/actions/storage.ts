@@ -266,8 +266,7 @@ export async function exportInquiriesToArchive(days: number = 90): Promise<{
         name: inq.product.name,
         referenceCode: inq.product.referenceCode
       } : null,
-      originalCreatedAt: inq.createdAt.toISOString(),
-      originalUpdatedAt: inq.updatedAt.toISOString()
+      originalCreatedAt: inq.createdAt.toISOString()
     }));
     
     const jsonData = JSON.stringify(archiveData, null, 2);
