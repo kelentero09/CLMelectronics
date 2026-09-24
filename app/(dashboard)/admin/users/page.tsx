@@ -5,23 +5,39 @@ import { UsersManager } from "@/components/dashboard/users-manager";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage Users — Admin" };
 
-export default async function AdminUsersPage() {
+const USERS_PAGE_SIZE = 10;
+
+export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page || 1) || 1);
   const { appUser: currentUser } = await requireAdmin();
 
   let users: Awaited<ReturnType<typeof prisma.user.findMany>> = [];
+  let total = 0;
   let error: string | null = null;
   try {
-    users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+    const [usersData, totalCount] = await Promise.all([
+      prisma.user.findMany({ 
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * USERS_PAGE_SIZE,
+        take: USERS_PAGE_SIZE,
+      }),
+      prisma.user.count(),
+    ]);
+    users = usersData;
+    total = totalCount;
   } catch (e) {
     console.error("[admin/users] query failed", e);
     error = "Could not load users — database unavailable.";
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-navy-900">Manage Users</h1>
+          <h1 className="text-xl font-bold text-navy-900">Manage Users ({total})</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
             Invite admins by email. Invited users receive an email to set their own password — no one else sees it.
             Only <span className="font-semibold">active ADMINs</span> can see this page.
@@ -44,6 +60,9 @@ export default async function AdminUsersPage() {
             createdAt: u.createdAt.toISOString(),
           }))}
           currentUserEmail={currentUser.email}
+          currentPage={page}
+          totalPages={totalPages}
+          baseUrl="/admin/users"
         />
       )}
 

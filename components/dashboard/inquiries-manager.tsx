@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toaster";
 import { updateInquiryStatus } from "@/app/actions/inquiries";
-import { Badge, Card, CardContent, DataTable } from "@/components/ui/card";
+import { Badge, Card, CardContent, DataTable, Pagination } from "@/components/ui/card";
 import { Select } from "@/components/ui/form";
 
 export type InquiryRow = {
@@ -25,7 +25,19 @@ function statusVariant(status: string) {
   return "success" as const;
 }
 
-export function InquiriesManager({ initial }: { initial: InquiryRow[] }) {
+export function InquiriesManager({ 
+  initial, 
+  currentPage = 1, 
+  totalPages = 1, 
+  baseUrl = "/admin/inquiries", 
+  searchParams = {} 
+}: { 
+  initial: InquiryRow[];
+  currentPage?: number;
+  totalPages?: number;
+  baseUrl?: string;
+  searchParams?: Record<string, string | undefined>;
+}) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
 
@@ -77,6 +89,9 @@ export function InquiriesManager({ initial }: { initial: InquiryRow[] }) {
   return (
     <>
       {cards}
+      <div className="md:hidden">
+        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} searchParams={searchParams} />
+      </div>
       <div className="hidden md:block">
         <DataTable aria-label="Inquiries">
           <thead>
@@ -120,6 +135,7 @@ export function InquiriesManager({ initial }: { initial: InquiryRow[] }) {
             )}
           </tbody>
         </DataTable>
+        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} searchParams={searchParams} />
       </div>
     </>
   );

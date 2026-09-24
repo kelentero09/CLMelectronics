@@ -47,3 +47,105 @@ export function DataTable({ className, ...props }: React.TableHTMLAttributes<HTM
     </div>
   );
 }
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  baseUrl: string;
+  searchParams?: Record<string, string | undefined>;
+}
+
+export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {} }: PaginationProps) {
+  const buildUrl = (page: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value) params.set(key, value);
+    }
+    if (page > 1) params.set("page", page.toString());
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const showEllipsis = totalPages > 7;
+    
+    if (showEllipsis) {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    } else {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    }
+    
+    return pages;
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-xs text-slate-600">
+        Page {currentPage} of {totalPages}
+      </p>
+      <div className="flex gap-1">
+        <a
+          href={buildUrl(currentPage - 1)}
+          className={cn(
+            "rounded border px-2.5 py-1 text-xs font-medium",
+            currentPage === 1
+              ? "border-slate-200 bg-slate-100 text-slate-400"
+              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          )}
+          aria-disabled={currentPage === 1}
+        >
+          Previous
+        </a>
+        {getPageNumbers().map((page, i) =>
+          typeof page === "number" ? (
+            <a
+              key={i}
+              href={buildUrl(page)}
+              className={cn(
+                "rounded border px-2.5 py-1 text-xs font-medium",
+                page === currentPage
+                  ? "border-navy-900 bg-navy-900 text-white"
+                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              {page}
+            </a>
+          ) : (
+            <span key={i} className="px-2.5 py-1 text-xs text-slate-400">
+              {page}
+            </span>
+          )
+        )}
+        <a
+          href={buildUrl(currentPage + 1)}
+          className={cn(
+            "rounded border px-2.5 py-1 text-xs font-medium",
+            currentPage === totalPages
+              ? "border-slate-200 bg-slate-100 text-slate-400"
+              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          )}
+          aria-disabled={currentPage === totalPages}
+        >
+          Next
+        </a>
+      </div>
+    </div>
+  );
+}

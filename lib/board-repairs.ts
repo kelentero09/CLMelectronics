@@ -17,6 +17,7 @@ export type BoardRepairRow = {
 type BoardRepairDelegate = {
   findMany: (args: object) => Promise<BoardRepairRow[]>;
   findUnique: (args: object) => Promise<BoardRepairRow | null>;
+  count: (args?: object) => Promise<number>;
 };
 
 /**

@@ -1,20 +1,23 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 import { Input, Select } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge, DataTable } from "@/components/ui/card";
+import { Badge, DataTable, Pagination } from "@/components/ui/card";
 import { RepairDeleteButton } from "@/components/dashboard/repair-delete-button";
-import { boardRepairDelegate } from "@/lib/board-repairs";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Board Repairs" };
 
-type SP = { q?: string; station?: string };
+const REPAIRS_PAGE_SIZE = 25;
+
+type SP = { q?: string; station?: string; page?: string };
 
 export default async function AdminRepairsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const stationFilter = sp.station ?? "";
+  const page = Math.max(1, Number(sp.page || 1) || 1);
   const where: Record<string, unknown> = {};
   if (stationFilter) where.station = stationFilter;
   if (q) {
@@ -36,30 +39,33 @@ export default async function AdminRepairsPage({ searchParams }: { searchParams:
     repairRate: number;
     isActive: boolean;
   }[] = [];
+  let total = 0;
   let stations: string[] = [];
   try {
-    const delegate = boardRepairDelegate();
-    const [rows, stationRows] = delegate
-      ? await Promise.all([
-          delegate.findMany({
-            where: where as never,
-            select: { id: true, station: true, model: true, boardDescription: true, image: true, problem: true, repairRate: true, isActive: true },
-            orderBy: [{ station: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
-            take: 500,
-          }),
-          delegate.findMany({ select: { station: true }, distinct: ["station"], orderBy: { station: "asc" } }),
-        ])
-      : [[], []];
+    const [rows, totalCount, stationRows] = await Promise.all([
+      prisma.boardRepair.findMany({
+        where: where as never,
+        select: { id: true, station: true, model: true, boardDescription: true, image: true, problem: true, repairRate: true, isActive: true },
+        orderBy: [{ station: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
+        skip: (page - 1) * REPAIRS_PAGE_SIZE,
+        take: REPAIRS_PAGE_SIZE,
+      }),
+      prisma.boardRepair.count({ where: where as never }),
+      prisma.boardRepair.findMany({ select: { station: true }, distinct: ["station"], orderBy: { station: "asc" } }),
+    ]);
     repairs = rows;
+    total = totalCount;
     stations = stationRows.map((r) => r.station);
   } catch (e) {
     console.error("Admin repairs query failed", e);
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / REPAIRS_PAGE_SIZE));
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-navy-900">Board Repairs ({repairs.length})</h1>
+        <h1 className="text-xl font-bold text-navy-900">Board Repairs ({total})</h1>
         <Link href="/admin/repairs/new" className={buttonVariants({ size: "sm" })}>+ Add Record</Link>
       </div>
 
@@ -117,6 +123,7 @@ export default async function AdminRepairsPage({ searchParams }: { searchParams:
             )}
           </tbody>
         </DataTable>
+        <Pagination currentPage={page} totalPages={totalPages} baseUrl="/admin/repairs" searchParams={{ q, station: stationFilter }} />
       </div>
     </div>
   );

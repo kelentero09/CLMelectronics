@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, Badge } from "@/components/ui/card";
+import { Card, CardContent, Badge, Pagination } from "@/components/ui/card";
 import { inviteUser, resendInvite, toggleUserActive, removeUser } from "@/app/actions/users";
 
 type UserRow = {
@@ -19,7 +19,19 @@ type UserRow = {
   createdAt: string;
 };
 
-export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; currentUserEmail: string }) {
+export function UsersManager({ 
+  users, 
+  currentUserEmail, 
+  currentPage = 1, 
+  totalPages = 1, 
+  baseUrl = "/admin/users" 
+}: { 
+  users: UserRow[]; 
+  currentUserEmail: string;
+  currentPage?: number;
+  totalPages?: number;
+  baseUrl?: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -270,6 +282,7 @@ export function UsersManager({ users, currentUserEmail }: { users: UserRow[]; cu
             </tbody>
           </table>
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={baseUrl} />
       </Card>
     </div>
   );
