@@ -148,37 +148,39 @@ export default async function StorageDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <p className="text-sm font-bold text-navy-900">Storage Recommendations</p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-xs text-slate-600">
-              {stats.inquiries.oldCount > 50 && (
-                <div className="rounded border border-amber-200 bg-amber-50 p-2">
-                  <p className="font-semibold text-amber-900">⚠️ High Inquiry Count</p>
-                  <p className="mt-1">Consider archiving or deleting {stats.inquiries.oldCount} old inquiries to save database space.</p>
+          <Card>
+            <CardHeader>
+              <p className="text-sm font-bold text-navy-900">Storage Recommendations</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 text-xs text-slate-600">
+                {stats.inquiries.oldCount > 50 && (
+                  <div className="rounded border border-amber-200 bg-amber-50 p-2">
+                    <p className="font-semibold text-amber-900">⚠️ High Inquiry Count</p>
+                    <p className="mt-1">Consider archiving or deleting {stats.inquiries.oldCount} old inquiries to save database space.</p>
+                  </div>
+                )}
+                {stats.database.totalSizeBytes > 400 * 1024 * 1024 && (
+                  <div className="rounded border border-red-200 bg-red-50 p-2">
+                    <p className="font-semibold text-red-900">⚠️ Database Near Limit</p>
+                    <p className="mt-1">Database is approaching 500MB limit. Implement cleanup strategies immediately.</p>
+                  </div>
+                )}
+                {stats.products.totalImages > 2000 && (
+                  <div className="rounded border border-blue-200 bg-blue-50 p-2">
+                    <p className="font-semibold text-blue-900">💡 Image Storage Growing</p>
+                    <p className="mt-1">Current images optimized to 600px/70% quality. For 10K+ products, consider external CDN.</p>
+                  </div>
+                )}
+                <div className="rounded border border-green-200 bg-green-50 p-2">
+                  <p className="font-semibold text-green-900">✓ Aggressive Optimization Active</p>
+                  <p className="mt-1">Images: 600px max, 70% quality. Inquiries: 500char limit, fixed fields.</p>
                 </div>
-              )}
-              {stats.database.totalSizeBytes > 400 * 1024 * 1024 && (
-                <div className="rounded border border-red-200 bg-red-50 p-2">
-                  <p className="font-semibold text-red-900">⚠️ Database Near Limit</p>
-                  <p className="mt-1">Database is approaching 500MB limit. Implement cleanup strategies immediately.</p>
-                </div>
-              )}
-              {stats.products.totalImages > 1000 && (
-                <div className="rounded border border-blue-200 bg-blue-50 p-2">
-                  <p className="font-semibold text-blue-900">💡 Image Optimization</p>
-                  <p className="mt-1">Consider implementing CDN or external storage for better performance.</p>
-                </div>
-              )}
-              <div className="rounded border border-green-200 bg-green-50 p-2">
-                <p className="font-semibold text-green-900">✓ Good Status</p>
-                <p className="mt-1">Current storage usage is within healthy limits.</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+        <StorageManager oldInquiryCount={stats.inquiries.oldCount} />
 
         <StorageManager oldInquiryCount={stats.inquiries.oldCount} />
       </div>

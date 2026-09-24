@@ -76,6 +76,10 @@ export function StorageManager({ oldInquiryCount }: { oldInquiryCount: number })
               Currently there are <span className="font-semibold text-navy-900">{oldInquiryCount}</span> inquiries older than 90 days.
               Managing old inquiries can significantly reduce database storage usage.
             </p>
+            <p className="mt-2 text-xs text-slate-500">
+              <strong>Current Optimization:</strong> Images at 600px/70% quality, Inquiries limited to 500 chars.
+              For 10K products with 8 images each: ~1.6-4.8GB storage (still requires external CDN for free tier).
+            </p>
           </div>
           
           <div>
