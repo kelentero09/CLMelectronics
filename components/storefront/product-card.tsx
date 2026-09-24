@@ -55,7 +55,7 @@ export function ProductCard({ product }: { product: CardProduct }) {
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 400px"
               loading="lazy"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-contain transition-transform duration-300 group-hover:scale-100"
             />
           ) : (
             <ProductImagePlaceholder referenceCode={product.referenceCode} />
