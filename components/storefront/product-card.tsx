@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AVAILABILITY_LABELS, CONDITION_LABELS } from "@/lib/catalog";
+import { CompareCheckbox } from "./compare-checkbox";
 
 export type CardProduct = {
   id: string;
@@ -46,8 +47,8 @@ export function ProductCard({ product }: { product: CardProduct }) {
 
   return (
     <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <Link href={`/products/${product.slug}`} className="block" aria-label={`View ${product.name}`}>
-        <div className="relative aspect-[4/3] overflow-hidden bg-white border border-slate-200">
+      <div className="relative aspect-[4/3] overflow-hidden bg-white border border-slate-200">
+        <Link href={`/products/${product.slug}`} className="block w-full h-full" aria-label={`View ${product.name}`}>
           {primary ? (
             <Image
               src={primary}
@@ -60,18 +61,21 @@ export function ProductCard({ product }: { product: CardProduct }) {
           ) : (
             <ProductImagePlaceholder referenceCode={product.referenceCode} />
           )}
-          <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
-            <Badge className={cn(availabilityStyle(product.availability))}>
-              {AVAILABILITY_LABELS[product.availability] ?? product.availability}
+        </Link>
+        <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1 pointer-events-none">
+          <Badge className={cn(availabilityStyle(product.availability))}>
+            {AVAILABILITY_LABELS[product.availability] ?? product.availability}
+          </Badge>
+          {product.condition && (
+            <Badge variant="outline" className="border-white/20 bg-black/55 text-white backdrop-blur">
+              {CONDITION_LABELS[product.condition] ?? product.condition}
             </Badge>
-            {product.condition && (
-              <Badge variant="outline" className="border-white/20 bg-black/55 text-white backdrop-blur">
-                {CONDITION_LABELS[product.condition] ?? product.condition}
-              </Badge>
-            )}
-          </div>
+          )}
         </div>
-      </Link>
+        <div className="absolute right-2 top-2 pointer-events-auto">
+          <CompareCheckbox productId={product.id} productName={product.name} />
+        </div>
+      </div>
       <CardContent className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
         <p className="truncate text-[10px] font-bold uppercase tracking-wider text-steel-600 sm:text-[11px]">
           {product.category?.name ?? "Catalog"}

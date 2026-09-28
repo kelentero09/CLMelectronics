@@ -1,5 +1,6 @@
 import { SiteHeader } from "@/components/storefront/site-header";
 import { SiteFooter } from "@/components/storefront/site-footer";
+import { ComparisonBar } from "@/components/storefront/comparison-bar";
 
 export default function StorefrontLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <SiteFooter />
+      <ComparisonBar />
     </>
   );
 }
