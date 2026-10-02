@@ -169,7 +169,7 @@ export default async function CompanyProfileHomePage() {
               </Link>
             </div>
           </Reveal>
-          <Reveal variant="right" delay={120} className="mx-auto w-full max-w-xs shrink-0 sm:max-w-sm lg:mx-0 lg:max-w-md">
+          <Reveal variant="right" delay={120} className="hidden lg:block lg:mx-0 lg:max-w-md">
             <Image
               src="/hero.jpg"
               alt="Semiconductor engineer operating wire bonding equipment"
@@ -219,44 +219,29 @@ export default async function CompanyProfileHomePage() {
 
       {/* 3. COMPANY PROFILE */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Company profile">
-        <div className="grid items-center gap-8 lg:grid-cols-2">
-          <Reveal variant="left" className="min-w-0">
-            <ProfileSectionHeader
-              eyebrow="Company Profile"
-              eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-              title="Who CLM Is"
-              description={content.home.profileDescription}
-            />
-            <ul className="mt-6 grid gap-2 sm:grid-cols-2" aria-label="Company highlights">
-              {profilePoints.map((point) => (
-                <li
-                  key={point}
-                  className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-navy-900"
-                >
-                  <span aria-hidden="true" className="mt-0.5 font-bold text-steel-600">✓</span>
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <Link href="/about" className="mt-5 inline-block text-sm font-semibold text-steel-600 hover:underline">
-              Learn more about CLM →
-            </Link>
-          </Reveal>
-          <Reveal variant="right" delay={120} className="mx-auto w-full max-w-md min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-navy-950 shadow-sm lg:justify-self-end">
-            <Image
-              src="/who-clm.jpg"
-              alt="CLM engineer performing board-level technical work"
-              width={880}
-              height={880}
-              className="h-auto w-full object-contain"
-              loading="lazy"
-            />
-            <div className="border-t border-white/10 px-5 py-4">
-              <p className="text-sm font-bold text-white">{company.name}</p>
-              <p className="mt-1 text-sm text-slate-300">{company.address}</p>
-            </div>
-          </Reveal>
+        <Reveal>
+        <ProfileSectionHeader
+          eyebrow="Company Profile"
+          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+          title="Who CLM Is"
+          description={content.home.profileDescription}
+        />
+        </Reveal>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {profilePoints.map((point, i) => (
+            <Reveal key={point} delay={Math.min(i * 80, 320)} className="h-full">
+            <article className="flex h-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+              <span aria-hidden="true" className="shrink-0 text-3xl font-bold text-steel-600">✓</span>
+              <p className="text-sm leading-relaxed text-slate-600 font-medium">{point}</p>
+            </article>
+            </Reveal>
+          ))}
         </div>
+        <Reveal className="mt-8 text-center">
+          <Link href="/about" className={buttonVariants({ size: "lg" })}>
+            Learn More About CLM <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </Reveal>
       </section>
 
       {/* 4. MISSION & VISION */}
@@ -340,32 +325,29 @@ export default async function CompanyProfileHomePage() {
 
       {/* 7. BOARD REPAIR SUMMARY */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Board repair services">
-        <div className="grid items-center gap-8 lg:grid-cols-2">
-          <Reveal variant="left" className="min-w-0">
-            <ProfileSectionHeader
-              eyebrow="Board repair"
-              eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-              title="Board Repair Services"
-              description={content.home.boardDescription}
-            />
-            <ul className="mt-5 grid grid-cols-2 gap-2" aria-label="Supported board types">
-              {boardTypes.map((b) => (
-                <li key={b} className="flex items-center gap-2 text-sm font-medium text-navy-900">
-                  <span aria-hidden="true" className="font-bold text-steel-600">✓</span> {b}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/board-repair"
-              className={cn(buttonVariants({ variant: "outline" }), "mt-6")}
-            >
-              View Board Repair Capabilities <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </Reveal>
-          <Reveal variant="right" delay={120} className="flex min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-10">
-            <CircuitBoard className="h-24 w-24 text-navy-900" strokeWidth={1.25} aria-hidden="true" />
-          </Reveal>
+        <Reveal>
+        <ProfileSectionHeader
+          eyebrow="Board repair"
+          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
+          title="Board Repair Services"
+          description={content.home.boardDescription}
+        />
+        </Reveal>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {boardTypes.map((b, i) => (
+            <Reveal key={b} delay={Math.min(i * 80, 320)} className="h-full">
+            <article className="flex h-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+              <span aria-hidden="true" className="shrink-0 text-3xl font-bold text-steel-600">✓</span>
+              <p className="text-sm leading-relaxed text-slate-600 font-medium">{b}</p>
+            </article>
+            </Reveal>
+          ))}
         </div>
+        <Reveal className="mt-8 text-center">
+          <Link href="/board-repair" className={buttonVariants({ size: "lg" })}>
+            View Board Repair Capabilities <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </Reveal>
       </section>
 
       {/* 8. WHY CLM */}
