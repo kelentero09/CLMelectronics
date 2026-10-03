@@ -9,6 +9,7 @@ import { InquiryForm } from "@/components/storefront/inquiry-form";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
 import { Badge } from "@/components/ui/card";
+import { DownloadSpecSheet } from "@/components/storefront/product-detail/download-spec-sheet";
 
 // ISR: detail pages are cached for 5 minutes and pre-rendered at build
 // time; admin edits revalidate them, so repeat visits skip the database.
@@ -130,6 +131,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               View Datasheet / Document
             </a>
           )}
+          <DownloadSpecSheet productId={product.id} productName={product.name} className="mt-4" />
         </div>
       </div>
 

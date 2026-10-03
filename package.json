@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "pnpm exec prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
+    "postinstall": "pnpm exec prisma generate",
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@react-pdf/renderer": "^4.9.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "class-variance-authority": "^0.7.1",
@@ -27,21 +28,26 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/node": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
+    "enhanced-resolve": "^5.26.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "prisma": "^6.19.3",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^5"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-  "packageManager": "pnpm@11.11.0"
+  "packageManager": "pnpm@11.11.0",
+  "overrides": {
+    "enhanced-resolve": "^5.26.0"
+  }
 }
