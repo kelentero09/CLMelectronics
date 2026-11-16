@@ -5,7 +5,7 @@ export default function BoardRepairLoading() {
     <div aria-label="Loading board repair records">
       {/* Hero spacer keeps layout stable while the page streams in */}
       <div className="blueprint-grid bg-navy-950">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-20 lg:py-24">
           <div className="h-4 w-32 rounded bg-white/10" />
           <div className="mt-3 h-9 w-2/3 max-w-md rounded bg-white/10" />
           <div className="mt-3 h-5 w-full max-w-2xl rounded bg-white/10" />

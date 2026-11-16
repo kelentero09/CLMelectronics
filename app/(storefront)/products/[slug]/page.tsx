@@ -156,8 +156,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               <FileText className="h-4 w-4" aria-hidden /> View datasheet / document
             </a>
           )}
-          <div className="mt-8 flex flex-wrap items-start gap-3 border-t border-slate-200 pt-6">
-            <a href="#inquire" className="inline-flex h-11 items-center gap-2 rounded-md bg-steel-500 px-5 text-sm font-semibold text-white shadow-lg shadow-steel-500/25 transition-[background-color,transform] hover:bg-steel-600 active:scale-[0.98]">
+          <div className="mt-8 flex flex-wrap items-start gap-3 border-t border-slate-200 pt-6 [&>div]:max-lg:w-full [&_button]:max-lg:w-full">
+            <a href="#inquire" className="hidden h-11 items-center gap-2 rounded-md bg-steel-500 px-5 lg:inline-flex text-sm font-semibold text-white shadow-lg shadow-steel-500/25 transition-[background-color,transform] hover:bg-steel-600 active:scale-[0.98]">
               <MessageSquare className="h-4 w-4" aria-hidden /> Inquire about this product
             </a>
             <DownloadSpecSheet slug={product.slug} productName={product.name} />
@@ -187,7 +187,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       )}
 
       {/* Mobile sticky call-to-action */}
-      <div data-mobile-cta className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur animate-slide-up-in lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur animate-slide-up-in lg:hidden">
         <a href="#inquire" className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-steel-500 text-sm font-semibold text-white active:scale-[0.98]">
           <MessageSquare className="h-4 w-4" aria-hidden /> Inquire about this product
         </a>

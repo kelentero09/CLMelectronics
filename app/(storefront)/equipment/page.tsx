@@ -41,7 +41,7 @@ export default async function EquipmentPage() {
 
       <Section aria-label="Equipment by category">
         <SectionHeader eyebrow="Platforms" title="Equipment We Support" />
-        <div className="mt-12 grid gap-5 md:grid-cols-2">
+        <div className="mt-8 grid sm:mt-12 gap-5 md:grid-cols-2">
           {equipmentGroups.map((g, i) => (
             <Reveal key={g.id} delay={i * 60} className="h-full">
               <article
@@ -87,7 +87,7 @@ export default async function EquipmentPage() {
           description={content.equipment.partsDescription}
           action={{ href: "/products?category=spare-parts", label: "Browse spare parts" }}
         />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid sm:mt-12 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {partsSourcing.map((g, i) => (
             <Reveal key={g.brand} delay={i * 60} className="h-full">
               <article className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-label={`${g.brand} parts`}>

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ChevronRight, GitCompareArrows, Menu, X } from "lucide-react";
+import { compareHref, COMPARE_MAX, useCompareIds } from "@/lib/compare-store";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -22,8 +23,27 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function CountBadge({ count, className }: { count: number; className?: string }) {
+  if (count === 0) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-steel-500 px-1.5 text-[11px] font-bold tabular-nums leading-none text-white",
+        className
+      )}
+    >
+      {count}
+    </span>
+  );
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
+  const compareIds = useCompareIds();
+  const compareCount = compareIds.length;
+  const compareLink = compareHref(compareIds);
+  const compareActive = isActive(pathname, "/compare");
+
   const [open, setOpen] = useState(false);
   const [openedAt, setOpenedAt] = useState(pathname);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -51,47 +71,52 @@ export function SiteHeader() {
     };
   }, [open]);
 
+  const compareLabel =
+    compareCount > 0 ? `Compare products (${compareCount} of ${COMPARE_MAX} selected)` : "Compare products";
+
   return (
     <header
       className="sticky top-0 z-50 border-b border-white/10 bg-navy-950/95 backdrop-blur"
       style={{ viewTransitionName: "site-header" }}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-3" aria-label="CLM home">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="CLM home">
           <Image
             src="/logo3.jpg"
             alt=""
             width={40}
             height={40}
-            className="h-10 w-10 rounded bg-white object-contain"
+            className="h-9 w-9 shrink-0 rounded bg-white object-contain sm:h-10 sm:w-10"
             priority
           />
-          <span className="leading-tight">
-            <span className="block text-sm font-bold tracking-wide text-white sm:text-base">
-              CLM ELECTRONICS
-            </span>
-            <span className="block text-[11px] font-medium tracking-[0.18em] text-slate-300">
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[13px] font-bold tracking-wide text-white sm:text-base">CLM ELECTRONICS</span>
+            <span className="block truncate text-[10px] font-medium tracking-[0.16em] text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
               ENGINEERING SERVICES
             </span>
           </span>
         </Link>
-        <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
-          {links.map((l) => {
-            const active = isActive(pathname, l.href);
+
+        {/* Desktop navigation */}
+        <nav aria-label="Primary" className="hidden items-center gap-0.5 xl:flex">
+          {[...links, { label: "Compare", href: compareLink }].map((l) => {
+            const isCompare = l.label === "Compare";
+            const active = isCompare ? compareActive : isActive(pathname, l.href);
             return (
               <Link
-                key={l.href}
+                key={l.label}
                 href={l.href}
                 aria-current={active ? "page" : undefined}
+                aria-label={isCompare ? compareLabel : undefined}
                 className={cn(
-                  "relative rounded px-3 py-2 text-sm font-medium transition-colors duration-150",
+                  "relative inline-flex items-center gap-1.5 rounded px-3 py-2 text-sm font-medium transition-colors duration-150",
                   "after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-accent-400 after:transition-transform after:duration-200",
-                  active
-                    ? "text-white after:scale-x-100"
-                    : "text-slate-300 after:scale-x-0 hover:bg-white/5 hover:text-white"
+                  active ? "text-white after:scale-x-100" : "text-slate-300 after:scale-x-0 hover:bg-white/5 hover:text-white"
                 )}
               >
+                {isCompare && <GitCompareArrows className="h-4 w-4" aria-hidden />}
                 {l.label}
+                {isCompare && <CountBadge count={compareCount} />}
               </Link>
             );
           })}
@@ -103,59 +128,103 @@ export function SiteHeader() {
             Contact CLM
           </Link>
         </nav>
-        <button
-          ref={toggleRef}
-          type="button"
-          onClick={() => {
-            setOpenedAt(pathname);
-            setOpen((v) => !v);
-          }}
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          aria-label={open ? "Close menu" : "Open menu"}
-          className="rounded p-2.5 text-slate-200 transition-colors hover:bg-white/10 hover:text-white md:hidden"
-        >
-          {open ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
-        </button>
+
+        {/* Mobile / tablet actions */}
+        <div className="flex shrink-0 items-center gap-1 xl:hidden">
+          <Link
+            href={compareLink}
+            aria-label={compareLabel}
+            aria-current={compareActive ? "page" : undefined}
+            className={cn(
+              "relative flex h-11 w-11 items-center justify-center rounded-lg transition-colors",
+              compareActive ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <GitCompareArrows className="h-5 w-5" aria-hidden />
+            <CountBadge count={compareCount} className="absolute right-0.5 top-0.5 ring-2 ring-navy-950" />
+          </Link>
+          <button
+            ref={toggleRef}
+            type="button"
+            onClick={() => {
+              setOpenedAt(pathname);
+              setOpen((v) => !v);
+            }}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            {open ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
+          </button>
+        </div>
       </div>
+
       {open && (
         <nav
           ref={menuRef}
           id="mobile-menu"
           aria-label="Mobile"
-          className="max-h-[calc(100dvh-4rem)] animate-slide-down overflow-y-auto border-t border-white/10 px-4 pb-4 pt-2 md:hidden"
+          className="h-[calc(100dvh-4rem)] animate-slide-down overflow-y-auto overscroll-contain border-t border-white/10 bg-navy-950 xl:hidden"
         >
-          <ul className="space-y-1">
-            {links.map((l) => {
-              const active = isActive(pathname, l.href);
-              return (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    onClick={() => setOpen(false)}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "block rounded px-3 py-3 text-sm font-medium transition-colors",
-                      active
-                        ? "bg-white/10 text-white"
-                        : "text-slate-200 hover:bg-white/5 hover:text-white"
-                    )}
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              );
-            })}
-            <li className="pt-2">
+          <div className="mx-auto flex min-h-full max-w-7xl flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
+            <ul className="divide-y divide-white/5">
+              {links.map((l) => {
+                const active = isActive(pathname, l.href);
+                return (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      onClick={() => setOpen(false)}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex items-center justify-between rounded-lg px-3 py-3.5 text-base font-medium transition-colors",
+                        active ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span
+                          aria-hidden
+                          className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-accent-400" : "bg-white/15")}
+                        />
+                        {l.label}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-500" aria-hidden />
+                    </Link>
+                  </li>
+                );
+              })}
+              <li>
+                <Link
+                  href={compareLink}
+                  onClick={() => setOpen(false)}
+                  aria-current={compareActive ? "page" : undefined}
+                  className={cn(
+                    "flex items-center justify-between rounded-lg px-3 py-3.5 text-base font-medium transition-colors",
+                    compareActive ? "bg-white/10 text-white" : "text-slate-200 hover:bg-white/5 hover:text-white"
+                  )}
+                >
+                  <span className="flex items-center gap-3">
+                    <GitCompareArrows className="h-4 w-4 text-accent-400" aria-hidden />
+                    Compare
+                    <CountBadge count={compareCount} />
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {compareCount > 0 ? `${compareCount} of ${COMPARE_MAX}` : "None selected"}
+                  </span>
+                </Link>
+              </li>
+            </ul>
+            <div className="mt-auto pt-6">
               <Link
                 href="/contact"
                 onClick={() => setOpen(false)}
-                className="block rounded bg-steel-500 px-3 py-3 text-center text-sm font-semibold text-white hover:bg-steel-600"
+                className="flex h-12 items-center justify-center rounded-lg bg-steel-500 text-base font-semibold text-white transition-colors hover:bg-steel-600"
               >
                 Contact CLM
               </Link>
-            </li>
-          </ul>
+            </div>
+          </div>
         </nav>
       )}
     </header>

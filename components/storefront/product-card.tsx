@@ -74,7 +74,7 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
             image
           )}
         </Link>
-        <div className="absolute left-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-1 pointer-events-none">
+        <div className="pointer-events-none absolute left-2 top-2 z-10 flex max-w-[calc(100%-3.25rem)] flex-wrap gap-1">
           <Badge className={cn(availabilityStyle(product.availability))}>
             {AVAILABILITY_LABELS[product.availability] ?? product.availability}
           </Badge>
@@ -102,7 +102,7 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
         {product.shortDescription && (
           <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{product.shortDescription}</p>
         )}
-        <p className="truncate font-mono text-[10px] text-slate-400 sm:text-[11px]">
+        <p className="hidden truncate font-mono text-[11px] text-slate-400 sm:block">
           {product.referenceCode}
           {product.model ? ` • ${product.model}` : ""}
           {manufacturer ? ` • ${manufacturer}` : ""}

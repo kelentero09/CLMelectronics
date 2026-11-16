@@ -89,15 +89,15 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
   return (
     <>
       <section aria-label="Documented repair capability" className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             [String(total), "Documented Repair Cases"],
             [`${highest}%`, "Highest Listed Repair Rate"],
             [String(processes), "Documented Processes"],
           ].map(([v, l]) => (
-            <div key={l} className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl shadow-navy-900/5">
-              <p className="text-4xl font-bold tracking-tight text-navy-900 tabular-nums">{v}</p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">{l}</p>
+            <div key={l} className="rounded-2xl border border-slate-200 bg-white px-2 py-4 text-center shadow-xl shadow-navy-900/5 sm:p-6">
+              <p className="text-2xl font-bold tracking-tight text-navy-900 tabular-nums sm:text-4xl">{v}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase leading-tight tracking-wide text-slate-500 sm:text-xs sm:tracking-wider">{l}</p>
             </div>
           ))}
         </div>

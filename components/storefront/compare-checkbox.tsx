@@ -1,24 +1,14 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toaster";
-import { COMPARE_EVENT, COMPARE_MAX, readCompareIds, writeCompareIds } from "@/lib/compare-store";
+import { compareHref, COMPARE_MAX, readCompareIds, useCompareIds, writeCompareIds } from "@/lib/compare-store";
 import { cn } from "@/lib/utils";
 
 export function CompareCheckbox({ productId, productName }: { productId: string; productName: string }) {
-  const [isComparing, setIsComparing] = useState(false);
-
-  useEffect(() => {
-    const sync = () => setIsComparing(readCompareIds().includes(productId));
-    sync();
-    window.addEventListener(COMPARE_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(COMPARE_EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, [productId]);
+  const router = useRouter();
+  const isComparing = useCompareIds().includes(productId);
 
   const toggleCompare = () => {
     const ids = readCompareIds();
@@ -28,11 +18,17 @@ export function CompareCheckbox({ productId, productName }: { productId: string;
       return;
     }
     if (ids.length >= COMPARE_MAX) {
-      toast.error(`You can compare up to ${COMPARE_MAX} products at a time`);
+      toast.error(`You can compare up to ${COMPARE_MAX} products at a time`, {
+        action: { label: "Open compare", onClick: () => router.push(compareHref(ids)) },
+      });
       return;
     }
-    writeCompareIds([...ids, productId]);
-    toast.success(`${productName} added to comparison`);
+    const next = [...ids, productId];
+    writeCompareIds(next);
+    toast.success(`Added to compare (${next.length} of ${COMPARE_MAX})`, {
+      description: productName,
+      action: { label: "Compare", onClick: () => router.push(compareHref(next)) },
+    });
   };
 
   const label = isComparing ? `Remove ${productName} from comparison` : `Add ${productName} to comparison`;
@@ -43,10 +39,10 @@ export function CompareCheckbox({ productId, productName }: { productId: string;
       onClick={toggleCompare}
       aria-pressed={isComparing}
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-md border-2 transition-[background-color,border-color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100",
+        "flex h-9 w-9 items-center justify-center rounded-lg border-2 shadow-sm transition-[background-color,border-color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 sm:h-8 sm:w-8",
         isComparing
           ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
-          : "border-white/40 bg-white/90 text-slate-800 hover:border-slate-300 hover:bg-white"
+          : "border-white/60 bg-white/95 text-slate-800 hover:border-slate-300 hover:bg-white"
       )}
       title={label}
       aria-label={label}

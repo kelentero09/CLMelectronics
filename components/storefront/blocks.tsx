@@ -34,7 +34,7 @@ export function Section({
       {...rest}
     >
       {tone === "dark" && <DarkBackdrop />}
-      <div className={cn("mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:py-24", innerClassName)}>{children}</div>
+      <div className={cn("mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 lg:py-24", innerClassName)}>{children}</div>
     </section>
   );
 }
@@ -173,11 +173,11 @@ export function PageHero({
           <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 to-transparent" />
         </div>
       )}
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:py-24">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-20 lg:py-24">
         {crumbs && crumbs.length > 0 && <Breadcrumbs items={crumbs} dark />}
         <div className={cn("max-w-2xl", crumbs && "mt-6")}>
           <Eyebrow dark>{eyebrow}</Eyebrow>
-          <h1 className="mt-4 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl">{title}</h1>
+          <h1 className="mt-4 text-balance text-[2rem] font-bold leading-tight tracking-tight text-white sm:text-5xl">{title}</h1>
           {description && <p className="mt-5 text-pretty text-base leading-relaxed text-slate-300 sm:text-lg">{description}</p>}
           {children && <div className="mt-8">{children}</div>}
         </div>
@@ -203,7 +203,7 @@ export function Breadcrumbs({ items, dark = false }: { items: { label: string; h
                 {item.label}
               </Link>
             ) : (
-              <span aria-current="page" className={dark ? "text-slate-200" : "text-navy-900"}>
+              <span aria-current="page" className={cn("line-clamp-1 max-w-[16rem] sm:max-w-none", dark ? "text-slate-200" : "text-navy-900")}>
                 {item.label}
               </span>
             )}
@@ -234,35 +234,38 @@ export function FeatureCard({
   index?: number;
   tone?: "navy" | "soft";
 }) {
+  // Mobile: compact row (icon beside text). sm+: stacked card.
   const body = (
     <>
-      <div className="flex items-start justify-between">
-        <div
-          className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100",
-            tone === "navy"
-              ? "bg-gradient-to-br from-navy-800 to-navy-950 text-accent-400 shadow-md shadow-navy-900/20"
-              : "bg-steel-500/10 text-steel-600"
-          )}
-        >
-          <IconCmp className="h-5 w-5" aria-hidden />
-        </div>
-        {typeof index === "number" && (
-          <span className="font-mono text-xs font-semibold text-slate-300">{String(index + 1).padStart(2, "0")}</span>
-        )}
-      </div>
-      <h3 className="mt-5 text-lg font-bold text-navy-900">{title}</h3>
-      {text && <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{text}</p>}
-      {href && (
-        <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-steel-600">
-          Learn more
-          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+      {typeof index === "number" && (
+        <span className="absolute right-6 top-6 hidden font-mono text-xs font-semibold text-slate-300 sm:block">
+          {String(index + 1).padStart(2, "0")}
         </span>
       )}
+      <div
+        className={cn(
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100 sm:h-12 sm:w-12",
+          tone === "navy"
+            ? "bg-gradient-to-br from-navy-800 to-navy-950 text-accent-400 shadow-md shadow-navy-900/20"
+            : "bg-steel-500/10 text-steel-600"
+        )}
+      >
+        <IconCmp className="h-5 w-5" aria-hidden />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h3 className="text-base font-bold leading-snug text-navy-900 sm:mt-5 sm:text-lg">{title}</h3>
+        {text && <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600 sm:mt-2">{text}</p>}
+        {href && (
+          <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-steel-600 sm:mt-4">
+            Learn more
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+          </span>
+        )}
+      </div>
     </>
   );
   const cls =
-    "group relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-[box-shadow,transform,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-steel-500/30 hover:shadow-xl hover:shadow-navy-900/5 motion-reduce:hover:translate-y-0 sm:p-7";
+    "group relative flex h-full gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-[box-shadow,transform,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-steel-500/30 hover:shadow-xl hover:shadow-navy-900/5 motion-reduce:hover:translate-y-0 sm:flex-col sm:gap-0 sm:p-7";
   return href ? (
     <Link href={href} className={cls}>
       {body}
@@ -390,7 +393,7 @@ export function CtaBanner({
 }) {
   return (
     <section className="px-4 py-10 sm:px-6 sm:py-12" aria-label="Call to action">
-      <Reveal className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-3xl bg-navy-950 px-6 py-12 shadow-2xl shadow-navy-900/20 sm:px-12 sm:py-16">
+      <Reveal className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-3xl bg-navy-950 px-5 py-10 shadow-2xl shadow-navy-900/20 sm:px-12 sm:py-16">
         <DarkBackdrop />
         <div aria-hidden className="absolute -right-24 top-1/2 -z-10 h-80 w-80 -translate-y-1/2 rounded-full border border-white/5" />
         <div aria-hidden className="absolute -right-10 top-1/2 -z-10 h-52 w-52 -translate-y-1/2 rounded-full border border-white/5" />
@@ -399,7 +402,7 @@ export function CtaBanner({
             <h2 className="text-balance text-3xl font-bold tracking-tight text-white sm:text-4xl">{title}</h2>
             {description && <p className="mt-4 text-pretty text-base leading-relaxed text-slate-300 sm:text-lg">{description}</p>}
           </div>
-          {children && <div className="flex flex-wrap gap-3">{children}</div>}
+          {children && <div className="grid gap-3 sm:flex sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">{children}</div>}
         </div>
       </Reveal>
     </section>

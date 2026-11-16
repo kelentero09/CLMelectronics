@@ -128,7 +128,7 @@ export default async function CompanyProfileHomePage() {
         <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-950 via-transparent to-navy-950/40" />
         <div aria-hidden className="blueprint-grid absolute inset-0 -z-10 opacity-60 [mask-image:linear-gradient(to_right,black,transparent_70%)]" />
 
-        <div className="mx-auto max-w-7xl px-4 pb-14 pt-16 sm:px-6 sm:pb-20 sm:pt-24 lg:pb-24 lg:pt-32">
+        <div className="mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pb-20 sm:pt-24 lg:pb-24 lg:pt-32">
           <div className="max-w-2xl animate-fade-up">
             {content.home.heroBadge && (
               <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-accent-400 backdrop-blur sm:px-4 sm:text-xs sm:tracking-[0.18em]">
@@ -146,7 +146,7 @@ export default async function CompanyProfileHomePage() {
               <p className="mt-5 text-balance text-lg font-semibold text-accent-400 sm:text-2xl">{content.home.heroSubtitle}</p>
             )}
             <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-slate-300 sm:text-lg">{company.description}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
               <Link href="/services" className={cn(buttonVariants({ size: "lg", variant: "primary" }), "shadow-lg shadow-steel-500/25")}>
                 Explore Our Services <ArrowRight aria-hidden />
               </Link>
@@ -160,7 +160,7 @@ export default async function CompanyProfileHomePage() {
           </div>
 
           {stats.length > 0 && (
-            <div className="mt-14 max-w-xl animate-fade-up [animation-delay:150ms]">
+            <div className="mt-10 max-w-xl animate-fade-up [animation-delay:150ms] sm:mt-14">
               <StatRow stats={stats} dark />
             </div>
           )}
@@ -184,7 +184,7 @@ export default async function CompanyProfileHomePage() {
           description={content.home.capabilitiesDescription}
           action={{ href: "/services", label: "View all services" }}
         />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid sm:mt-12 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {capabilityCards.map((c, i) => (
             <Reveal key={c.title} delay={i * 60} className="h-full">
               <FeatureCard icon={c.icon} title={c.title} text={c.text} index={i} />
@@ -202,7 +202,7 @@ export default async function CompanyProfileHomePage() {
           action={{ href: "/products", label: "View all products" }}
         />
         {featured.length > 0 ? (
-          <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
+          <div className="mt-8 grid sm:mt-12 grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
             {featured.map((p, i) => (
               <Reveal key={p.id} delay={i * 60} className="[&>*]:h-full">
                 <ProductCard product={p} morph />
@@ -220,7 +220,7 @@ export default async function CompanyProfileHomePage() {
       <Section aria-label="Company profile">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <Reveal variant="left" className="relative">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl shadow-2xl shadow-navy-900/20 sm:aspect-[5/4] lg:aspect-[4/5]">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl shadow-navy-900/20 sm:aspect-[5/4] lg:aspect-[4/5]">
               <Image
                 src="/images/team.webp"
                 alt="CLM engineer inspecting a wire bonder under a microscope"
@@ -330,7 +330,7 @@ export default async function CompanyProfileHomePage() {
       {/* 7. WHY CLM */}
       <Section aria-label="Why CLM">
         <SectionHeader eyebrow="Why CLM" title="A Dependable Engineering Partner" description={content.home.whyDescription} align="center" />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid sm:mt-12 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {whyClm.map((w, i) => (
             <Reveal key={w.title} delay={i * 60} className="h-full">
               <FeatureCard icon={w.icon} title={w.title} text={w.text} tone="soft" />
@@ -354,7 +354,7 @@ export default async function CompanyProfileHomePage() {
         )}
       </CtaBanner>
 
-      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6" aria-label="Company contact information">
+      <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 sm:pb-20" aria-label="Company contact information">
         <Reveal className="grid gap-4 sm:grid-cols-3">
           {[
             { icon: MapPin, label: "Visit", value: company.address },

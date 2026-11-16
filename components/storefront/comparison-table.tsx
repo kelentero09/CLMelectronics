@@ -156,23 +156,34 @@ export function ComparisonTable({ products, onRemove }: { products: ComparisonPr
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full table-fixed border-separate border-spacing-0 text-sm" style={{ minWidth: 200 + cols * 210 }}>
+      {/* Table. Phones: narrow label column, ~11rem product columns, empty "add" slots hidden. */}
+      {products.length > 1 && (
+        <p className="flex items-center justify-end gap-1.5 text-xs font-medium text-slate-500 sm:hidden">
+          Swipe to see all {products.length} products <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </p>
+      )}
+      <div className="overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table
+          className="w-full min-w-[calc(7rem+var(--pcols)*11rem)] table-fixed border-separate border-spacing-0 text-sm sm:min-w-[calc(13rem+var(--cols)*13rem)]"
+          style={{ "--cols": cols, "--pcols": products.length } as React.CSSProperties}
+        >
           <caption className="sr-only">Comparison of {products.length} products</caption>
           <colgroup>
-            <col className="w-[180px] sm:w-[220px]" />
-            {Array.from({ length: cols }).map((_, i) => (
-              <col key={i} />
+            <col className="w-[7rem] sm:w-[13rem]" />
+            {products.map((p) => (
+              <col key={p.id} />
+            ))}
+            {Array.from({ length: emptySlots }).map((_, i) => (
+              <col key={`ec-${i}`} className="hidden sm:table-column" />
             ))}
           </colgroup>
           <thead>
             <tr>
               <th
                 scope="col"
-                className="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 p-4 text-left align-bottom"
+                className="sticky left-0 z-20 border-b border-r border-slate-200 bg-slate-50 p-3 text-left align-bottom sm:p-4"
               >
-                <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.18em]">
                   {products.length} of {MAX_COMPARE} selected
                 </span>
               </th>
@@ -182,7 +193,7 @@ export function ComparisonTable({ products, onRemove }: { products: ComparisonPr
                 </th>
               ))}
               {Array.from({ length: emptySlots }).map((_, i) => (
-                <th key={`empty-${i}`} scope="col" className="border-b border-slate-200 p-3 align-top font-normal sm:p-4">
+                <th key={`empty-${i}`} scope="col" className="hidden border-b border-slate-200 p-3 align-top font-normal sm:table-cell sm:p-4">
                   <Link
                     href="/products"
                     className="group flex h-full min-h-[260px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 text-sm font-semibold text-slate-400 transition-colors hover:border-steel-500/40 hover:text-steel-600"
@@ -227,7 +238,7 @@ export function ComparisonTable({ products, onRemove }: { products: ComparisonPr
                       <th
                         scope="row"
                         className={cn(
-                          "sticky left-0 z-10 border-b border-r border-slate-200 px-4 py-3 text-left align-top font-semibold text-navy-900 transition-colors",
+                          "sticky left-0 z-10 border-b border-r border-slate-200 px-3 py-3 text-left align-top text-xs font-semibold text-navy-900 transition-colors sm:px-4 sm:text-sm",
                           row.differs ? "bg-amber-50 shadow-[inset_3px_0_0_var(--color-amber-400)]" : "bg-white group-hover/row:bg-slate-50"
                         )}
                       >
@@ -237,7 +248,7 @@ export function ComparisonTable({ products, onRemove }: { products: ComparisonPr
                         <td
                           key={i}
                           className={cn(
-                            "border-b border-slate-100 px-4 py-3 align-top transition-colors",
+                            "break-words border-b border-slate-100 px-3 py-3 align-top text-[13px] transition-colors sm:px-4 sm:text-sm",
                             row.mono && "font-mono text-xs",
                             v === EMPTY
                               ? "text-slate-300"
@@ -261,7 +272,7 @@ export function ComparisonTable({ products, onRemove }: { products: ComparisonPr
                         </td>
                       ))}
                       {Array.from({ length: emptySlots }).map((_, i) => (
-                        <td key={`e-${i}`} className="border-b border-slate-100" />
+                        <td key={`e-${i}`} className="hidden border-b border-slate-100 sm:table-cell" />
                       ))}
                     </tr>
                   ))
@@ -335,7 +346,7 @@ function ProductHeader({ product: p, onRemove }: { product: ComparisonProduct; o
         </a>
         <Link
           href={`/products/${p.slug}`}
-          className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-slate-700 transition-colors hover:bg-slate-50 hover:text-navy-900"
+          className="hidden h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-slate-700 transition-colors hover:bg-slate-50 hover:text-navy-900 sm:inline-flex"
           aria-label={`View ${p.name}`}
           title="View details"
         >

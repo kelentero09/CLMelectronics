@@ -74,13 +74,6 @@ body {
   background-size: 32px 32px;
 }
 
-/* Lift floating UI (comparison bar) above the mobile sticky call-to-action when present. */
-@media (max-width: 1023px) {
-  :root:has([data-mobile-cta]) {
-    --sticky-cta-h: 4.25rem;
-  }
-}
-
 /* Skeleton placeholder with a soft shimmer (replaces animate-pulse). */
 @utility skeleton {
   background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
