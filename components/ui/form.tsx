@@ -5,7 +5,7 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-steel-500",
+        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 transition-[border-color,box-shadow] duration-150 focus:border-steel-500 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-red-500/30",
         className
       )}
       {...props}
@@ -17,7 +17,7 @@ export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<H
   return (
     <textarea
       className={cn(
-        "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-steel-500",
+        "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 transition-[border-color,box-shadow] duration-150 focus:border-steel-500 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-red-500/30",
         className
       )}
       {...props}
@@ -29,7 +29,7 @@ export function Select({ className, children, ...props }: React.SelectHTMLAttrib
   return (
     <select
       className={cn(
-        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-steel-500",
+        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm transition-[border-color] duration-150 focus:border-steel-500",
         className
       )}
       {...props}

@@ -17,7 +17,8 @@ export async function convertToWebP(input: Buffer | File): Promise<Buffer> {
   const buffer = input instanceof File ? Buffer.from(await input.arrayBuffer()) : input;
   // Aggressive optimization: 600px max dimension, 70% quality
   // Still sufficient for catalog thumbnails while maximizing storage efficiency
-  return sharp(buffer)
+  // limitInputPixels guards against decompression-bomb images.
+  return sharp(buffer, { limitInputPixels: 40_000_000, failOn: "error" })
     .rotate()
     .resize({ width: 600, height: 600, fit: "inside", withoutEnlargement: true })
     .webp({ quality: WEBP_QUALITY, effort: 4 })

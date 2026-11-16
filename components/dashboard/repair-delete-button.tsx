@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/toaster";
 import { deleteBoardRepair } from "@/app/actions/board-repairs";
 import { buttonVariants } from "@/components/ui/button";
@@ -11,7 +12,7 @@ export function RepairDeleteButton({ id, board }: { id: string; board: string })
   const [pending, setPending] = useState(false);
 
   async function handleDelete() {
-    if (!window.confirm(`Delete "${board}"? This cannot be undone.`)) return;
+    if (!(await confirmDialog({ title: `Delete "${board}"?`, description: "This repair record will be permanently deleted. This cannot be undone.", confirmLabel: "Delete", tone: "danger" }))) return;
     setPending(true);
     try {
       const result = await deleteBoardRepair(id);

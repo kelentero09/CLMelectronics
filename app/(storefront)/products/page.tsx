@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { PAGE_SIZE } from "@/lib/catalog";
-import { getCatalogFacets, productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
+import { AVAILABILITY_LABELS, CONDITION_LABELS, PAGE_SIZE } from "@/lib/catalog";
+import { getCatalogFacets, getCatalogPage, type ProductCardData } from "@/lib/catalog-queries";
+import { AVAILABILITY_VALUES, CONDITION_VALUES, catalogParamsSchema } from "@/lib/validators";
 import { ProductCard } from "@/components/storefront/product-card";
 import { CategoryTabs } from "@/components/storefront/category-tabs";
 import { EmptyState } from "@/components/storefront/empty-state";
@@ -12,25 +13,19 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-// Dynamic (searchParams) but fast: filter facets come from the 5-minute
-// cache, and each visit costs only 2 lean indexed queries (page + count)
-// fetching card-sized rows with a single image each.
+// Dynamic (reads searchParams), but each filter combination's page + count is
+// served from a 5-minute tagged cache (lib/catalog-queries.ts) and busted on
+// any admin product/category change.
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Products",
   description:
     "Browse CLM Electronics Engineering Services products: equipment, spare parts, manufacturing consumables, ESD materials, and office supplies. Information and inquiry only.",
+  alternates: { canonical: "/products" },
 };
 
-type SearchParams = {
-  q?: string;
-  category?: string;
-  manufacturer?: string;
-  condition?: string;
-  availability?: string;
-  page?: string;
-};
+type SearchParams = Record<string, string | string[] | undefined>;
 
 function buildLink(base: Record<string, string>, overrides: Record<string, string | undefined>) {
   const params = new URLSearchParams();
@@ -49,37 +44,23 @@ type CategoryWithCount = {
   _count: { products: number };
 };
 
-const CONDITIONS = ["NEW", "USED", "REFURBISHED", "SURPLUS", "FOR_PARTS"];
-const AVAILABILITIES = ["IN_STOCK", "LOW_STOCK", "RESERVED", "SOLD", "UNAVAILABLE"];
+const CONDITIONS = CONDITION_VALUES;
+const AVAILABILITIES = AVAILABILITY_VALUES;
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const sp = await searchParams;
-  const q = sp.q?.trim() ?? "";
-  const categoryParam = sp.category ?? "";
-  const manufacturerParam = sp.manufacturer ?? "";
-  const condition = sp.condition ?? "";
-  const availability = sp.availability ?? "";
-  const page = Math.max(1, Number(sp.page || 1) || 1);
-  const skip = (page - 1) * PAGE_SIZE;
-
-  const where: Record<string, unknown> = { published: true, deletedAt: null };
-  if (condition) where.condition = condition;
-  if (availability) where.availability = availability;
-  if (manufacturerParam) where.manufacturer = manufacturerParam;
-  if (q) {
-    // Indexed trigram search over short columns only. `description` is
-    // deliberately excluded: it's an unindexed Text field and full-table
-    // ILIKE scans on it were the slowest part of filtered loads.
-    where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { referenceCode: { contains: q, mode: "insensitive" } },
-      { model: { contains: q, mode: "insensitive" } },
-      { partNumber: { contains: q, mode: "insensitive" } },
-      { manufacturer: { contains: q, mode: "insensitive" } },
-    ];
-  }
-
-  const orderBy: Record<string, string> = { createdAt: "desc" };
+  const raw = await searchParams;
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const sp = catalogParamsSchema.parse({
+    q: first(raw.q),
+    category: first(raw.category),
+    manufacturer: first(raw.manufacturer),
+    condition: first(raw.condition),
+    availability: first(raw.availability),
+    page: first(raw.page),
+  });
+  const { q, condition, availability, page } = sp;
+  const categoryParam = sp.category;
+  const manufacturerParam = sp.manufacturer;
 
   let products: ProductCardData[] = [];
   let total = 0;
@@ -87,6 +68,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   let manufacturers: string[] = [];
   let dbOnline = true;
   let categoryMissing = false;
+  let categoryId: string | null = null;
 
   if (categoryParam) {
     try {
@@ -94,11 +76,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         where: { OR: [{ slug: categoryParam }, { id: categoryParam }] },
         select: { id: true },
       });
-      if (!cat) {
-        categoryMissing = true;
-      } else {
-        (where as Record<string, unknown>).categoryId = cat.id;
-      }
+      if (!cat) categoryMissing = true;
+      else categoryId = cat.id;
     } catch (e) {
       console.error("Category lookup failed", e);
       dbOnline = false;
@@ -113,27 +92,28 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  try {
-    // Facets (tabs + sidebar) are served from cache — no live aggregation
-    // per visit. Only the page rows and the count hit the database.
-    const [p, t, facets] = await Promise.all([
-      prisma.product.findMany({
-        where: where as never,
-        select: productCardSelect,
-        orderBy: orderBy as never,
-        skip,
-        take: PAGE_SIZE,
-      }),
-      prisma.product.count({ where: where as never }),
-      getCatalogFacets(),
-    ]);
-    products = p;
-    total = t;
-    categories = facets.categories;
-    manufacturers = facets.manufacturers;
-  } catch (e) {
-    console.error("Catalog query failed", e);
-    dbOnline = false;
+  if (dbOnline) {
+    try {
+      const [pageData, facets] = await Promise.all([
+        getCatalogPage({
+          q,
+          categoryId,
+          manufacturer: manufacturerParam,
+          condition,
+          availability,
+          page,
+          pageSize: PAGE_SIZE,
+        }),
+        getCatalogFacets(),
+      ]);
+      products = pageData.products;
+      total = pageData.total;
+      categories = facets.categories;
+      manufacturers = facets.manufacturers;
+    } catch (e) {
+      console.error("Catalog query failed", e);
+      dbOnline = false;
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -232,6 +212,35 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             </form>
           </div>
 
+          {(q || manufacturerParam || condition || availability) && (
+            <div className="flex flex-wrap items-center gap-2" aria-label="Active filters">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {total} result{total === 1 ? "" : "s"}
+              </span>
+              {[
+                q && { key: "q", label: `“${q}”` },
+                manufacturerParam && { key: "manufacturer", label: manufacturerParam },
+                condition && { key: "condition", label: CONDITION_LABELS[condition] ?? condition },
+                availability && { key: "availability", label: AVAILABILITY_LABELS[availability] ?? availability },
+              ]
+                .filter((c): c is { key: string; label: string } => !!c)
+                .map((c) => (
+                  <Link
+                    key={c.key}
+                    href={buildLink(base, { [c.key]: undefined, page: undefined })}
+                    className="group inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-navy-900 transition-colors hover:border-navy-900 hover:bg-slate-50"
+                    aria-label={`Remove filter ${c.label}`}
+                  >
+                    {c.label}
+                    <X className="h-3 w-3 text-slate-500 transition-colors group-hover:text-navy-900" aria-hidden="true" />
+                  </Link>
+                ))}
+              <Link href={categoryParam ? buildLink({}, { category: categoryParam }) : "/products"} className="text-xs font-semibold text-steel-600 hover:underline">
+                Clear all
+              </Link>
+            </div>
+          )}
+
           {!dbOnline ? (
             <EmptyState
               title="Catalog unavailable"
@@ -246,7 +255,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-3">
               {products.map((p, i) => (
                 <Reveal key={p.id} delay={Math.min(i * 40, 200)} className="[&>*]:h-full">
-                  <ProductCard product={p} />
+                  <ProductCard product={p} morph />
                 </Reveal>
               ))}
             </div>
@@ -300,7 +309,7 @@ function FilterPanel({
         <div className="mt-1 flex flex-wrap gap-1">
           <Link href={buildLink(base, { condition: undefined, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", !condition ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
           {CONDITIONS.map((c) => (
-            <Link key={c} href={buildLink(base, { condition: c, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", condition === c ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>{c}</Link>
+            <Link key={c} href={buildLink(base, { condition: c, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", condition === c ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")} aria-current={condition === c ? "true" : undefined}>{CONDITION_LABELS[c] ?? c}</Link>
           ))}
         </div>
       </div>
@@ -309,7 +318,7 @@ function FilterPanel({
         <div className="mt-1 flex flex-wrap gap-1">
           <Link href={buildLink(base, { availability: undefined, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", !availability ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
           {AVAILABILITIES.map((a) => (
-            <Link key={a} href={buildLink(base, { availability: a, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", availability === a ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>{a.replace("_", " ")}</Link>
+            <Link key={a} href={buildLink(base, { availability: a, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", availability === a ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")} aria-current={availability === a ? "true" : undefined}>{AVAILABILITY_LABELS[a] ?? a}</Link>
           ))}
         </div>
       </div>

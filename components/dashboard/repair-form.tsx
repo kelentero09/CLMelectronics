@@ -6,6 +6,7 @@ import { toast } from "@/components/ui/toaster";
 import { createBoardRepair, updateBoardRepair } from "@/app/actions/board-repairs";
 import { Input, Textarea, Label, Checkbox, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { downscaleFormImages } from "@/lib/client-image";
 import { MAX_IMAGE_SIZE_BYTES, ALLOWED_IMAGE_MIME_TYPES } from "@/lib/catalog";
 
 export type RepairFormInitial = {
@@ -59,6 +60,7 @@ export function RepairForm({
     setPending(true);
     try {
       const form = new FormData(e.currentTarget);
+      await downscaleFormImages(form, "photo");
       const result =
         mode === "create" ? await createBoardRepair(form) : await updateBoardRepair(repairId!, form);
       if (result.ok) {

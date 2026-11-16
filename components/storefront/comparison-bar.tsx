@@ -1,75 +1,56 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/card";
-
-const COMPARE_STORAGE_KEY = "clm_compare_products";
+import { buttonVariants } from "@/components/ui/button";
+import { COMPARE_EVENT, readCompareIds, writeCompareIds } from "@/lib/compare-store";
+import { cn } from "@/lib/utils";
 
 export function ComparisonBar() {
-  const [compareCount, setCompareCount] = useState(0);
   const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Initial load from localStorage
-    updateCount();
-
-    // Listen for updates from compare checkboxes
-    const handleUpdate = () => updateCount();
-    window.addEventListener("compare-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-
+    const sync = () => setCompareIds(readCompareIds());
+    sync();
+    window.addEventListener(COMPARE_EVENT, sync);
+    window.addEventListener("storage", sync);
     return () => {
-      window.removeEventListener("compare-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener(COMPARE_EVENT, sync);
+      window.removeEventListener("storage", sync);
     };
   }, []);
 
-  const updateCount = () => {
-    const stored = localStorage.getItem(COMPARE_STORAGE_KEY);
-    const ids = stored ? JSON.parse(stored) as string[] : [];
-    setCompareIds(ids);
-    setCompareCount(ids.length);
-    setIsVisible(ids.length > 0);
-  };
-
-  const clearComparison = () => {
-    localStorage.removeItem(COMPARE_STORAGE_KEY);
-    setCompareCount(0);
-    setCompareIds([]);
-    setIsVisible(false);
-    window.dispatchEvent(new CustomEvent("compare-updated"));
-  };
-
-  if (!isVisible) return null;
-
-  const compareUrl = `/compare?ids=${compareIds.join(",")}`;
+  const count = compareIds.length;
+  if (count === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md">
-      <div className="flex items-center gap-2 sm:gap-3 rounded-full bg-navy-900 px-3 sm:px-6 py-2 sm:py-3 shadow-lg">
-        <Badge className="bg-emerald-600 text-white border-transparent text-[10px] sm:text-xs">
-          {compareCount} {compareCount === 1 ? "product" : "products"}
+    <div
+      role="region"
+      aria-label="Product comparison"
+      className="fixed bottom-[calc(1rem+var(--sticky-cta-h,0px))] left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 animate-slide-up-in"
+    >
+      <div className="flex items-center gap-2 rounded-full bg-navy-900 px-3 py-2 shadow-lg ring-1 ring-white/10 sm:gap-3 sm:px-6 sm:py-3">
+        <Badge className="border-transparent bg-emerald-600 text-[10px] text-white sm:text-xs" aria-live="polite">
+          {count} {count === 1 ? "product" : "products"}
         </Badge>
-        <span className="text-xs sm:text-sm font-medium text-white hidden sm:inline">selected for comparison</span>
-        
-        <Link href={compareUrl} className="ml-auto">
-          <Button size="sm" className="gap-1 bg-white text-navy-900 hover:bg-slate-100 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3">
-            <span className="hidden sm:inline">Compare Now</span>
-            <span className="sm:hidden">Compare</span>
-            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-          </Button>
+        <span className="hidden text-sm font-medium text-white sm:inline">selected for comparison</span>
+        <Link
+          href={`/compare?ids=${compareIds.join(",")}`}
+          className={cn(buttonVariants({ size: "sm" }), "ml-auto h-8 gap-1 bg-white px-3 text-xs text-navy-900 hover:bg-slate-100")}
+        >
+          Compare<span className="hidden sm:inline"> Now</span>
+          <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
-        
         <button
-          onClick={clearComparison}
-          className="rounded-full p-1 text-slate-400 hover:text-white transition-colors"
+          type="button"
+          onClick={() => writeCompareIds([])}
+          className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Clear comparison"
           title="Clear comparison"
         >
-          <X className="h-3 w-3 sm:h-4 sm:w-4" />
+          <X className="h-4 w-4" aria-hidden />
         </button>
       </div>
     </div>

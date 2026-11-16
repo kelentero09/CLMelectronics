@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toaster";
 import { createCategory, updateCategory, toggleCategoryActive, deleteCategory } from "@/app/actions/categories";
 import { Input, Textarea, Label, Checkbox, FieldError } from "@/components/ui/form";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent } from "@/components/ui/card";
 import { slugify } from "@/lib/utils";
@@ -63,7 +64,7 @@ export function CategoryManager({ initial }: { initial: CategoryRow[] }) {
       toast.error(`Cannot delete — ${count} product(s) still use this category. Deactivate it instead.`);
       return;
     }
-    if (!window.confirm(`Delete category "${name}"?`)) return;
+    if (!(await confirmDialog({ title: `Delete category "${name}"?`, description: "This permanently removes the category.", confirmLabel: "Delete", tone: "danger" }))) return;
     const result = await deleteCategory(id);
     if (result.ok) {
       toast.success("Category deleted");

@@ -1,5 +1,8 @@
 import { Suspense } from "react";
-import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
+import { findUserByInviteToken } from "@/lib/invites";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 import AcceptInviteForm from "./accept-form";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +22,7 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
 
   let user: { email: string; name: string | null; inviteTokenExpiresAt: Date | null } | null = null;
   try {
-    user = await prisma.user.findUnique({
-      where: { inviteToken: token },
-      select: { email: true, name: true, inviteTokenExpiresAt: true },
-    });
+    user = await findUserByInviteToken(token);
   } catch {}
 
   if (!user) {

@@ -2,7 +2,9 @@
  * Supabase clients for the CLM catalog (dedicated CLM Supabase project).
  * Supabase Auth owns credentials; Prisma User stores the application role.
  */
-import { createBrowserClient, createServerClient } from "@supabase/ssr";
+import { cache } from "react";
+import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient, type User } from "@supabase/supabase-js";
 
 function getSupabaseConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,11 +17,6 @@ function getSupabaseConfig() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
-export function createSupabaseBrowserClient() {
-  const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
-}
-
 export async function createSupabaseServerClient() {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
   const { cookies } = await import("next/headers");
@@ -30,51 +27,44 @@ export async function createSupabaseServerClient() {
         return cookieStore.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
-        });
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Called from a Server Component — cookies are read-only there.
+          // The proxy refreshes the session, so this is safe to ignore.
+        }
       },
     },
   });
-}
-
-function isRefreshTokenError(err: unknown): boolean {
-  const msg =
-    err instanceof Error ? err.message : typeof err === "string" ? err : (err as { message?: string })?.message ?? "";
-  return /refresh_token_not_found|refresh token not found|invalid refresh token/i.test(msg);
 }
 
 export async function getSupabaseSession() {
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      if (isRefreshTokenError(error)) return null;
-      return null;
-    }
+    if (error) return null;
     return data.session;
-  } catch (err) {
-    if (isRefreshTokenError(err)) return null;
+  } catch {
     return null;
   }
 }
 
-export async function getSupabaseUser() {
+/**
+ * Verified Supabase user for the current request. Wrapped in React `cache()`
+ * so layout + page + components share ONE network round-trip per request.
+ */
+export const getSupabaseUser = cache(async (): Promise<User | null> => {
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.getUser();
-    if (error) {
-      if (isRefreshTokenError(error)) return null;
-      return null;
-    }
+    if (error) return null;
     return data.user;
-  } catch (err) {
-    if (isRefreshTokenError(err)) return null;
+  } catch {
     return null;
   }
-}
-
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+});
 
 /** Service-role client — server-only, bypasses RLS. Never expose to the browser. */
 export function createSupabaseServiceClient() {
@@ -86,4 +76,22 @@ export function createSupabaseServiceClient() {
   return createSupabaseClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+/**
+ * Finds a Supabase Auth user by email, paging through ALL users
+ * (listUsers() alone only returns the first page of 50).
+ */
+export async function findAuthUserByEmail(email: string): Promise<User | null> {
+  const supabase = createSupabaseServiceClient();
+  const target = email.toLowerCase();
+  const perPage = 1000;
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const found = data.users.find((u) => u.email?.toLowerCase() === target);
+    if (found) return found;
+    if (data.users.length < perPage) return null;
+  }
+  return null;
 }

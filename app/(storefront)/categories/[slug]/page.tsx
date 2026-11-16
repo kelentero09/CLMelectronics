@@ -82,7 +82,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
         <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
           {products.map((p, i) => (
             <Reveal key={p.id} delay={Math.min(i * 40, 200)} className="[&>*]:h-full">
-              <ProductCard product={p} />
+              <ProductCard product={p} morph />
             </Reveal>
           ))}
         </div>

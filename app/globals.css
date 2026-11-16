@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  /* Brand palette */
   --color-navy-950: #0a1628;
   --color-navy-900: #0b1d33;
   --color-navy-800: #12294a;
@@ -8,21 +9,61 @@
   --color-steel-600: #2459c4;
   --color-accent-400: #5b8def;
   --color-accent-500: #2f6fed;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-}
 
-html {
-  scroll-behavior: smooth;
+  /* Semantic tokens */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-ink: #1e293b;
+  --color-ink-muted: #475569;
+  --color-line: #e2e8f0;
+  --color-focus: #2f6fed;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Motion tokens */
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+
+  /* Animations (usable as animate-fade-up, animate-fade-in, animate-shimmer, ...) */
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-out-soft) both;
+  --animate-fade-up: fade-up var(--duration-slow) var(--ease-out-soft) both;
+  --animate-slide-down: slide-down var(--duration-base) var(--ease-out-soft) both;
+  --animate-slide-up-in: slide-up-in var(--duration-base) var(--ease-out-soft) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-up-in {
+    from { opacity: 0; transform: translateY(100%); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
 }
 
 body {
-  background-color: #ffffff;
-  color: #1e293b;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
-  outline: 2px solid #2f6fed;
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -31,4 +72,99 @@ body {
     linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+/* Lift floating UI (comparison bar) above the mobile sticky call-to-action when present. */
+@media (max-width: 1023px) {
+  :root:has([data-mobile-cta]) {
+    --sticky-cta-h: 4.25rem;
+  }
+}
+
+/* Skeleton placeholder with a soft shimmer (replaces animate-pulse). */
+@utility skeleton {
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* ---------- Page transitions (View Transitions API via React <ViewTransition>) ---------- */
+
+/* Default route change: quick crossfade with a slight upward drift. */
+::view-transition-old(root) {
+  animation: var(--duration-fast) var(--ease-out-soft) both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: var(--duration-base) var(--ease-out-soft) both vt-fade-in;
+}
+::view-transition-old(.page) {
+  animation: var(--duration-fast) var(--ease-out-soft) both vt-fade-out;
+}
+::view-transition-new(.page) {
+  animation: var(--duration-base) var(--ease-out-soft) both vt-fade-up;
+}
+
+/* Keep the sticky header fixed while the page content transitions. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+/* Product image morph (card -> detail page). */
+::view-transition-group(.morph) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-in-out-soft);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: vt-via-blur;
+}
+
+/* Clicks during a transition go to the live page. */
+::view-transition {
+  pointer-events: none;
+}
+
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+}
+@keyframes vt-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+}
+@keyframes vt-via-blur {
+  30% { filter: blur(3px); }
+}
+
+/* ---------- Motion preferences ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }

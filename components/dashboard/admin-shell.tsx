@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText, HelpCircle, Users, HardDrive } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
 const nav = [

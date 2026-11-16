@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { generateSpecSheet } from "@/app/actions/pdf";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function DownloadSpecSheet({
-  productId,
+  slug,
   productName,
   className = "",
 }: {
-  productId: string;
+  slug: string;
   productName: string;
   className?: string;
 }) {
@@ -21,56 +20,48 @@ export function DownloadSpecSheet({
     setPending(true);
     setError(null);
     try {
-      const arrayBuffer = await generateSpecSheet(productId);
-      const url = URL.createObjectURL(new Blob([new Uint8Array(arrayBuffer)], { type: "application/pdf" }));
+      const res = await fetch(`/products/${encodeURIComponent(slug)}/spec-sheet`);
+      if (res.status === 429) throw new Error("Too many downloads. Please wait a minute and try again.");
+      if (!res.ok) throw new Error("Failed to generate spec sheet. Please try again.");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const safeName = productName
-        .replace(/[^a-z0-9\s-]/gi, "")
-        .replace(/\s+/g, "-")
-        .toLowerCase()
-        .substring(0, 80);
       a.href = url;
-      a.download = `${safeName}-spec-sheet.pdf`;
+      a.download = `${slug}-spec-sheet.pdf`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      console.error("PDF generation failed:", err);
-      setError("Failed to generate spec sheet. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to generate spec sheet. Please try again.");
     } finally {
       setPending(false);
     }
   }
 
-  if (error) {
-    return (
-      <div className="text-red-600 text-sm" role="alert">
-        {error}
-      </div>
-    );
-  }
-
   return (
-    <Button
-      type="button"
-      onClick={handleDownload}
-      disabled={pending}
-      variant="outline"
-      className={`gap-2 ${className}`}
-      aria-label={`Download ${productName} specification sheet as PDF`}
-    >
-      {pending ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Generating…
-        </>
-      ) : (
-        <>
-          <FileText className="h-4 w-4" />
-          Download Spec Sheet
-        </>
+    <div className={className}>
+      <Button
+        type="button"
+        onClick={handleDownload}
+        disabled={pending}
+        variant="outline"
+        className="gap-2"
+        aria-label={`Download ${productName} specification sheet as PDF`}
+        aria-busy={pending}
+      >
+        {pending ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <FileText className="h-4 w-4" aria-hidden />
+        )}
+        {pending ? "Generating…" : "Download Spec Sheet"}
+      </Button>
+      {error && (
+        <p className="mt-2 text-sm text-red-600" role="alert">
+          {error}
+        </p>
       )}
-    </Button>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cleanupOldInquiries, exportInquiriesToArchive } from "@/app/actions/storage";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form";
 import { Label } from "@/components/ui/form";
@@ -16,7 +17,7 @@ export function StorageManager({ oldInquiryCount }: { oldInquiryCount: number })
   const [days, setDays] = useState(90);
 
   async function handleCleanup() {
-    if (!confirm(`Delete all COMPLETED inquiries older than ${days} days? This action cannot be undone.`)) return;
+    if (!(await confirmDialog({ title: "Delete old inquiries?", description: `All COMPLETED inquiries older than ${days} days will be permanently deleted. This cannot be undone.`, confirmLabel: "Delete", tone: "danger" }))) return;
     
     setPending(true);
     try {
@@ -35,7 +36,7 @@ export function StorageManager({ oldInquiryCount }: { oldInquiryCount: number })
   }
 
   async function handleArchive() {
-    if (!confirm(`Archive all COMPLETED inquiries older than ${days} days? This will export them to JSON and delete from database.`)) return;
+    if (!(await confirmDialog({ title: "Archive old inquiries?", description: `All COMPLETED inquiries older than ${days} days will be downloaded as JSON and then deleted from the database.`, confirmLabel: "Archive & delete", tone: "danger" }))) return;
     
     setArchiving(true);
     try {

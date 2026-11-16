@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -94,6 +95,7 @@ export async function updateSiteContent(form: FormData): Promise<ActionResult> {
     revalidateAll();
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -136,6 +138,7 @@ export async function updateSiteContentJson(key: string, form: FormData): Promis
     revalidateAll();
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }

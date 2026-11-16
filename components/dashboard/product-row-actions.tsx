@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toaster";
 import { togglePublish, softDeleteProduct, restoreProduct } from "@/app/actions/products";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 
 export function PublishToggle({ id, published }: { id: string; published: boolean }) {
@@ -31,12 +32,29 @@ export function DeleteRestoreButtons({ id, deleted }: { id: string; deleted: boo
   const router = useRouter();
   const [pending, setPending] = useState(false);
   async function run() {
-    if (!deleted && !window.confirm("Soft-delete this product? It will be hidden from the catalog.")) return;
+    if (!deleted && !(await confirmDialog({ title: "Delete this product?", description: "It will be hidden from the catalog. You can restore it later.", confirmLabel: "Delete", tone: "danger" }))) return;
     setPending(true);
     const result = deleted ? await restoreProduct(id) : await softDeleteProduct(id);
     setPending(false);
     if (result.ok) {
-      toast.success(deleted ? "Product restored" : "Product deleted (soft)");
+      if (deleted) {
+        toast.success("Product restored");
+      } else {
+        toast.success("Product deleted", {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              const undo = await restoreProduct(id);
+              if (undo.ok) {
+                toast.success("Product restored");
+                router.refresh();
+              } else {
+                toast.error(undo.error);
+              }
+            },
+          },
+        });
+      }
       router.refresh();
     } else {
       toast.error(result.error);

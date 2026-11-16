@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
@@ -51,6 +52,7 @@ export async function createBoardRepair(form: FormData): Promise<ActionResult> {
         const { publicUrl } = await uploadRepairImage({ file: photo });
         image = publicUrl;
       } catch (e) {
+        unstable_rethrow(e);
         console.error("[board-repairs action] photo upload failed", e);
         return { ok: false, error: "Photo upload failed. Only JPEG, PNG, WebP, or AVIF up to 5 MB." };
       }
@@ -61,6 +63,7 @@ export async function createBoardRepair(form: FormData): Promise<ActionResult> {
     revalidateAll();
     return { ok: true, id: row.id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -84,6 +87,7 @@ export async function updateBoardRepair(id: string, form: FormData): Promise<Act
         image = publicUrl;
         await cleanupStorageUrl(existing.image);
       } catch (e) {
+        unstable_rethrow(e);
         console.error("[board-repairs action] photo upload failed", e);
         return { ok: false, error: "Photo upload failed. Only JPEG, PNG, WebP, or AVIF up to 5 MB." };
       }
@@ -96,6 +100,7 @@ export async function updateBoardRepair(id: string, form: FormData): Promise<Act
     revalidateAll();
     return { ok: true, id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -111,6 +116,7 @@ export async function deleteBoardRepair(id: string): Promise<ActionResult> {
     revalidateAll();
     return { ok: true, id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -122,6 +128,7 @@ async function cleanupStorageUrl(url: string | null) {
   try {
     await deleteProductImage(path);
   } catch (e) {
+    unstable_rethrow(e);
     console.error("[board-repairs action] storage cleanup failed (DB already updated)", e);
   }
 }

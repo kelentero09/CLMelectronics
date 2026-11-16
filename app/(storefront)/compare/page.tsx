@@ -1,8 +1,14 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { ComparisonPageClient } from "@/components/storefront/comparison-page-client";
 
-const COMPARE_STORAGE_KEY = "clm_compare_products";
+export const metadata: Metadata = {
+  title: "Compare Products",
+  robots: { index: false, follow: true },
+};
+
+const MAX_COMPARE = 4;
 
 type ComparisonProduct = {
   id: string;
@@ -62,7 +68,9 @@ export default async function ComparePage({
   searchParams: Promise<{ ids?: string }>;
 }) {
   const params = await searchParams;
-  const urlIds = params.ids?.split(",").filter(Boolean) || [];
+  const urlIds = [...new Set((params.ids ?? "").split(",").map((s) => s.trim()))]
+    .filter((s) => /^[A-Za-z0-9_-]{1,64}$/.test(s))
+    .slice(0, MAX_COMPARE);
 
   let products: ComparisonProduct[] = [];
 
@@ -78,12 +86,12 @@ export default async function ComparePage({
         <p className="text-slate-600 mb-6">
           Please select products to compare from the catalog.
         </p>
-        <a
+        <Link
           href="/products"
-          className="inline-block px-6 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors"
+          className="inline-block rounded-lg bg-navy-900 px-6 py-3 text-white transition-colors hover:bg-navy-800"
         >
           Browse Products
-        </a>
+        </Link>
       </div>
     );
   }
@@ -96,12 +104,12 @@ export default async function ComparePage({
         <p className="text-slate-600 mb-6">
           No valid products found for comparison. Please select different products.
         </p>
-        <a
+        <Link
           href="/products"
-          className="inline-block px-6 py-3 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors"
+          className="inline-block rounded-lg bg-navy-900 px-6 py-3 text-white transition-colors hover:bg-navy-800"
         >
           Browse Products
-        </a>
+        </Link>
       </div>
     );
   }

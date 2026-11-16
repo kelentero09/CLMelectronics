@@ -25,7 +25,7 @@ let cachedTransporter: Transporter | null | undefined;
 function sanitizeSmtpPass(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   // dotenv keeps inline comment as part of value: "abcd efgh # comment" → strip at #
-  let v = raw.split("#")[0]!.trim();
+  const v = raw.split("#")[0]!.trim();
   // Gmail app passwords are shown as "abcd efgh ijkl mnop" but SMTP wants "abcdefghijklmnop"
   // Keep compatibility: remove spaces, but also accept with spaces
   const noSpaces = v.replace(/\s+/g, "");
@@ -60,7 +60,7 @@ export function isEmailConfigured(): boolean {
 }
 
 export async function sendMail(opts: SendOpts): Promise<{ ok: true } | { ok: false; error: string }> {
-  let transporter = getTransporter();
+  const transporter = getTransporter();
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || "CLM Electronics <noreply@clm.local>";
   if (!transporter) {
     // Dev fallback: try Ethereal (free, no credentials needed) so user sees working email without Gmail

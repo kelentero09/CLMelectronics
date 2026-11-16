@@ -1,59 +1,57 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
-import { useState, useEffect } from "react";
-
-const COMPARE_STORAGE_KEY = "clm_compare_products";
+import { useEffect, useState } from "react";
+import { toast } from "@/components/ui/toaster";
+import { COMPARE_EVENT, COMPARE_MAX, readCompareIds, writeCompareIds } from "@/lib/compare-store";
+import { cn } from "@/lib/utils";
 
 export function CompareCheckbox({ productId, productName }: { productId: string; productName: string }) {
   const [isComparing, setIsComparing] = useState(false);
 
   useEffect(() => {
-    // Check if this product is already in comparison
-    const stored = localStorage.getItem(COMPARE_STORAGE_KEY);
-    if (stored) {
-      const compareIds = JSON.parse(stored) as string[];
-      setIsComparing(compareIds.includes(productId));
-    }
+    const sync = () => setIsComparing(readCompareIds().includes(productId));
+    sync();
+    window.addEventListener(COMPARE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(COMPARE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, [productId]);
 
   const toggleCompare = () => {
-    const stored = localStorage.getItem(COMPARE_STORAGE_KEY);
-    let compareIds: string[] = stored ? JSON.parse(stored) : [];
-
-    if (isComparing) {
-      compareIds = compareIds.filter((id) => id !== productId);
-    } else {
-      if (compareIds.length >= 4) {
-        alert("You can compare up to 4 products at a time");
-        return;
-      }
-      compareIds.push(productId);
-      // Show notification
-      alert(`${productName} added to comparison`);
+    const ids = readCompareIds();
+    if (ids.includes(productId)) {
+      writeCompareIds(ids.filter((id) => id !== productId));
+      toast(`${productName} removed from comparison`);
+      return;
     }
-
-    localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(compareIds));
-    setIsComparing(!isComparing);
-
-    // Dispatch custom event to update comparison bar
-    window.dispatchEvent(new CustomEvent("compare-updated"));
+    if (ids.length >= COMPARE_MAX) {
+      toast.error(`You can compare up to ${COMPARE_MAX} products at a time`);
+      return;
+    }
+    writeCompareIds([...ids, productId]);
+    toast.success(`${productName} added to comparison`);
   };
+
+  const label = isComparing ? `Remove ${productName} from comparison` : `Add ${productName} to comparison`;
 
   return (
     <button
+      type="button"
       onClick={toggleCompare}
-      className={`
-        flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-md border-2 transition-all
-        ${isComparing 
-          ? "bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700" 
-          : "bg-white/90 border-white/40 text-slate-800 hover:bg-white hover:border-slate-300"
-        }
-      `}
-      title={isComparing ? `Remove ${productName} from comparison` : `Add ${productName} to comparison`}
-      aria-label={isComparing ? `Remove ${productName} from comparison` : `Add ${productName} to comparison`}
+      aria-pressed={isComparing}
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-md border-2 transition-[background-color,border-color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100",
+        isComparing
+          ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+          : "border-white/40 bg-white/90 text-slate-800 hover:border-slate-300 hover:bg-white"
+      )}
+      title={label}
+      aria-label={label}
     >
-      {isComparing ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : <Plus className="h-3 w-3 sm:h-4 sm:w-4" />}
+      {isComparing ? <Check className="h-4 w-4" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />}
     </button>
   );
 }

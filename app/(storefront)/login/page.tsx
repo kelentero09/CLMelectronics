@@ -3,8 +3,9 @@
 import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { requestPasswordReset } from "@/app/actions/auth";
+import { safeNext } from "@/lib/safe-redirect";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,17 +21,18 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/admin";
-  const forbidden = searchParams.get("error") === "forbidden";
-  const disabled = searchParams.get("error") === "disabled";
-  const initialErr = forbidden
-    ? "That account does not have admin access."
-    : disabled
-      ? "That account has been disabled. Contact an admin."
-      : null;
+  const redirect = safeNext(searchParams.get("redirect"), "/admin");
+  const errorCode = searchParams.get("error");
+  const initialErr =
+    errorCode === "forbidden"
+      ? "That account does not have admin access."
+      : errorCode === "disabled"
+        ? "That account has been disabled. Contact an admin."
+        : errorCode === "link_invalid"
+          ? "That sign-in link is invalid or has expired. Request a new one."
+          : null;
   const [error, setError] = useState<string | null>(initialErr);
   const [info, setInfo] = useState<string | null>(null);
-  const [recoveryLink, setRecoveryLink] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [resetPending, setResetPending] = useState(false);
   const [resetCooldown, setResetCooldown] = useState(0);
@@ -46,9 +48,15 @@ function LoginForm() {
       const supabase = createSupabaseBrowserClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
-        setError(signInError.message);
+        setError(
+          /invalid login credentials/i.test(signInError.message)
+            ? "Incorrect email or password."
+            : /email not confirmed/i.test(signInError.message)
+              ? "Please accept your invite email before signing in."
+              : "Sign-in failed. Please try again."
+        );
       } else {
-        router.push(redirect);
+        router.replace(redirect);
         router.refresh();
       }
     } catch {
@@ -68,7 +76,6 @@ function LoginForm() {
     if (resetCooldown > 0) return;
     setError(null);
     setInfo(null);
-    setRecoveryLink(null);
     const emailInput = document.getElementById("email") as HTMLInputElement | null;
     const email = emailInput?.value?.trim() ?? "";
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -80,12 +87,9 @@ function LoginForm() {
       const res = await requestPasswordReset(email);
       if (!res.ok) {
         setError(res.error);
-        if (/rate limit/i.test(res.error)) setResetCooldown(60);
+        if (/too many/i.test(res.error)) setResetCooldown(60);
       } else {
-        setInfo(res.message ?? "Password reset email sent — check your inbox.");
-        if ((res as unknown as { recoveryLink?: string }).recoveryLink) {
-          setRecoveryLink((res as unknown as { recoveryLink: string }).recoveryLink);
-        }
+        setInfo(res.message ?? "If an account exists, a reset link has been sent.");
         setResetCooldown(60);
       }
     } catch {
@@ -114,27 +118,14 @@ function LoginForm() {
           <form onSubmit={handleSubmit} className="mt-4 space-y-4" aria-label="Admin sign in">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required autoComplete="email" />
+              <Input id="email" name="email" type="email" required autoComplete="email" maxLength={254} />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required autoComplete="current-password" />
+              <Input id="password" name="password" type="password" required autoComplete="current-password" maxLength={128} />
             </div>
             <FieldError message={error} />
-            {info && <p className="text-xs font-semibold text-emerald-700">{info}</p>}
-            {recoveryLink && (
-              <div className="rounded border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs font-bold text-amber-900">No SMTP configured — copy reset link:</p>
-                <input readOnly value={recoveryLink} className="mt-2 w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-xs" />
-                <button
-                  type="button"
-                  onClick={() => navigator.clipboard.writeText(recoveryLink)}
-                  className="mt-2 text-xs font-semibold text-amber-900 underline"
-                >
-                  Copy link
-                </button>
-              </div>
-            )}
+            {info && <p role="status" className="text-xs font-semibold text-emerald-700">{info}</p>}
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Signing in…" : "Sign In"}
             </Button>

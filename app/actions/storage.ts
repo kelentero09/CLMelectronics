@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
 import { createSupabaseServiceClient } from "@/lib/auth";
@@ -97,6 +98,7 @@ export async function getStorageStats(): Promise<{ ok: true; data: StorageStats 
         };
       }
     } catch (e) {
+      unstable_rethrow(e);
       console.error("Storage stats failed", e);
     }
 
@@ -154,6 +156,7 @@ export async function getStorageStats(): Promise<{ ok: true; data: StorageStats 
       }
     };
   } catch (e) {
+    unstable_rethrow(e);
     console.error("[storage stats]", e);
     return { ok: false, error: "Failed to get storage statistics" };
   }
@@ -180,12 +183,19 @@ function formatBytes(bytes: number): string {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
+/** Retention window must be a sane positive integer (prevents negative values deleting everything). */
+function clampDays(days: unknown): number {
+  const n = Math.floor(Number(days));
+  if (!Number.isFinite(n)) return 90;
+  return Math.min(3650, Math.max(30, n));
+}
+
 export async function cleanupOldInquiries(days: number = 90): Promise<{ ok: true; deleted: number } | { ok: false; error: string }> {
   try {
     await requireAdmin();
     
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    cutoffDate.setDate(cutoffDate.getDate() - clampDays(days));
     
     // Delete completed inquiries older than specified days
     const result = await prisma.inquiry.deleteMany({
@@ -199,6 +209,7 @@ export async function cleanupOldInquiries(days: number = 90): Promise<{ ok: true
     
     return { ok: true, deleted: result.count };
   } catch (e) {
+    unstable_rethrow(e);
     console.error("[storage cleanup]", e);
     return { ok: false, error: "Failed to cleanup old inquiries" };
   }
@@ -214,6 +225,7 @@ export async function deleteInquiryById(id: string): Promise<{ ok: true } | { ok
     
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
     console.error("[inquiry delete]", e);
     return { ok: false, error: "Failed to delete inquiry" };
   }
@@ -228,7 +240,7 @@ export async function exportInquiriesToArchive(days: number = 90): Promise<{
     await requireAdmin();
     
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    cutoffDate.setDate(cutoffDate.getDate() - clampDays(days));
     
     // Get inquiries to archive
     const inquiries = await prisma.inquiry.findMany({
@@ -271,18 +283,16 @@ export async function exportInquiriesToArchive(days: number = 90): Promise<{
     
     const jsonData = JSON.stringify(archiveData, null, 2);
     
-    // Delete archived inquiries from database
+    // Delete exactly the rows that were exported (no race with newly completed rows)
     await prisma.inquiry.deleteMany({
-      where: {
-        status: "COMPLETED",
-        createdAt: { lt: cutoffDate }
-      }
+      where: { id: { in: inquiries.map((i) => i.id) } },
     });
     
     console.log(`[storage archive] Archived ${inquiries.length} inquiries older than ${days} days`);
     
     return { ok: true, archived: inquiries.length, data: jsonData };
   } catch (e) {
+    unstable_rethrow(e);
     console.error("[storage archive]", e);
     return { ok: false, error: "Failed to archive inquiries" };
   }

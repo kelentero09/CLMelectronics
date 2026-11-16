@@ -1,11 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { BoardRepairRecord } from "@/data/board-repair";
 
 function PhotoCell({ board, image }: { board: string; image: string | null }) {
   const [enlarged, setEnlarged] = useState(false);
+  useEffect(() => {
+    if (!enlarged) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setEnlarged(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [enlarged]);
   if (!image) {
     return (
       <span className="inline-block rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -22,20 +29,20 @@ function PhotoCell({ board, image }: { board: string; image: string | null }) {
         className="block overflow-hidden rounded border border-slate-200"
         aria-label={`Enlarge photo of ${board}`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={`${board} board`} loading="lazy" className="h-14 w-20 bg-white object-contain" />
+        <Image src={src} alt={`${board} board`} width={80} height={56} sizes="80px" className="h-14 w-20 bg-white object-contain" />
       </button>
       {enlarged && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label={`${board} photo`}
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[80] flex animate-fade-in items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
           onClick={() => setEnlarged(false)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={`${board} board — enlarged`} className="max-h-[85vh] max-w-full rounded bg-white object-contain p-2" />
-          <button type="button" className="absolute right-4 top-4 rounded bg-white px-3 py-1.5 text-sm font-semibold" onClick={() => setEnlarged(false)} aria-label="Close photo">
+          <div className="relative h-[85vh] w-full max-w-4xl animate-fade-up">
+            <Image src={src} alt={`${board} board, enlarged`} fill sizes="(max-width: 896px) 100vw, 896px" className="rounded bg-white object-contain p-2" />
+          </div>
+          <button type="button" autoFocus className="absolute right-4 top-4 rounded bg-white px-3 py-1.5 text-sm font-semibold shadow" onClick={() => setEnlarged(false)} aria-label="Close photo">
             Close ✕
           </button>
         </div>

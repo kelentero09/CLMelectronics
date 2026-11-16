@@ -3,41 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
-import { randomBytes } from "crypto";
-import { createSupabaseServiceClient } from "@/lib/auth";
+import { unstable_rethrow } from "next/navigation";
+import { generateToken, hashToken } from "@/lib/tokens";
+import { getSiteUrl } from "@/lib/site-url";
+import { createSupabaseServiceClient, findAuthUserByEmail } from "@/lib/auth";
 import { inviteUserSchema, firstIssueMessage } from "@/lib/validators";
 import { sendMail, buildInviteHtml, isEmailConfigured } from "@/lib/email";
 
 export type UserActionResult = { ok: true; message?: string; inviteLink?: string } | { ok: false; error: string };
-
-async function getSiteUrl(): Promise<string> {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  const isLocalhostRaw = raw === "http://localhost:3000" || raw === "https://localhost:3000" || raw === "http://localhost:3000/" || raw === "https://localhost:3000/";
-  // If user explicitly set a non-localhost URL, honor it (Vercel prod or Hostinger)
-  if (raw && !isLocalhostRaw) return raw.replace(/\/$/, "");
-  // In production/Vercel, localhost is wrong — try to infer real host
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-    try {
-      const { headers } = await import("next/headers");
-      const h = await headers();
-      const host = h.get("host");
-      const proto = h.get("x-forwarded-proto") || "https";
-      if (host && !host.includes("localhost")) {
-        return `${proto}://${host}`.replace(/\/$/, "");
-      }
-    } catch {}
-    const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-    if (vercelUrl) {
-      const withProto = vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
-      if (!withProto.includes("localhost")) return withProto.replace(/\/$/, "");
-    }
-    if (isLocalhostRaw) {
-      console.warn(`[getSiteUrl] NEXT_PUBLIC_SITE_URL is localhost but running on Vercel — using Vercel host if available. Set NEXT_PUBLIC_SITE_URL to https://<your-vercel>.vercel.app in Vercel env and redeploy.`);
-    }
-  }
-  if (raw) return raw.replace(/\/$/, "");
-  return "http://localhost:3000";
-}
 
 function isEmailRateLimitMessage(msg: string): boolean {
   return /rate limit|too many requests|over_email|email.*limit|429/i.test(msg);
@@ -48,6 +21,7 @@ function rateLimitMessage(): string {
 }
 
 function fail(error: unknown): UserActionResult {
+  unstable_rethrow(error);
   console.error("[users action]", error);
   const msg = error instanceof Error ? error.message : String(error);
   if (isEmailRateLimitMessage(msg)) return { ok: false, error: rateLimitMessage() };
@@ -75,15 +49,16 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
       return { ok: false, error: "A user with this email already exists." };
     }
 
-    const siteUrl = await getSiteUrl();
+    const siteUrl = getSiteUrl();
     // Pure Postgres token — no Supabase generateLink, no Supabase email, no rate limit
-    const token = randomBytes(32).toString("hex");
+    const token = generateToken();
+    const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.user.upsert({
       where: { email },
-      update: { name: name ?? undefined, isActive: true, invitedAt: new Date(), inviteAccepted: false, inviteToken: token, inviteTokenExpiresAt: expiresAt },
-      create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date(), inviteAccepted: false, inviteToken: token, inviteTokenExpiresAt: expiresAt },
+      update: { name: name ?? undefined, isActive: true, invitedAt: new Date(), inviteAccepted: false, inviteToken: tokenHash, inviteTokenExpiresAt: expiresAt },
+      create: { email, name, role: "ADMIN", isActive: true, invitedAt: new Date(), inviteAccepted: false, inviteToken: tokenHash, inviteTokenExpiresAt: expiresAt },
     });
 
     const inviteLink = `${siteUrl}/auth/accept-invite?token=${token}`;
@@ -112,10 +87,11 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
     if (!appUser) return { ok: false, error: "User not found" };
     if (!appUser.isActive) return { ok: false, error: "User is disabled — enable first." };
 
-    const siteUrl = await getSiteUrl();
-    const token = randomBytes(32).toString("hex");
+    const siteUrl = getSiteUrl();
+    const token = generateToken();
+    const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await prisma.user.update({ where: { email }, data: { invitedAt: new Date(), inviteAccepted: false, inviteToken: token, inviteTokenExpiresAt: expiresAt } });
+    await prisma.user.update({ where: { email }, data: { invitedAt: new Date(), inviteAccepted: false, inviteToken: tokenHash, inviteTokenExpiresAt: expiresAt } });
 
     const inviteLink = `${siteUrl}/auth/accept-invite?token=${token}`;
     const html = buildInviteHtml(inviteLink, email, siteUrl);
@@ -168,8 +144,7 @@ export async function removeUser(userId: string): Promise<UserActionResult> {
 
     try {
       const supabase = createSupabaseServiceClient();
-      const { data } = await supabase.auth.admin.listUsers();
-      const authUser = data.users.find((u) => u.email?.toLowerCase() === target.email.toLowerCase());
+      const authUser = await findAuthUserByEmail(target.email);
       if (authUser) await supabase.auth.admin.deleteUser(authUser.id);
     } catch (e) {
       console.warn("[users] Supabase Auth delete failed (DB row already deleted)", e);

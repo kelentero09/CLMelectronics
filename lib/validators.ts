@@ -103,3 +103,19 @@ export function validateImageFile(file: { type: string; size: number; name: stri
   if (!file.name || file.name.length > 200) return "Invalid file name";
   return null;
 }
+
+export const CONDITION_VALUES = ["NEW", "USED", "REFURBISHED", "SURPLUS", "FOR_PARTS"] as const;
+export const AVAILABILITY_VALUES = ["IN_STOCK", "LOW_STOCK", "RESERVED", "SOLD", "UNAVAILABLE"] as const;
+
+/**
+ * Public catalog query params. Invalid values are dropped (never thrown), so a
+ * hand-edited URL can't produce a 500 from an invalid Prisma enum.
+ */
+export const catalogParamsSchema = z.object({
+  q: z.string().transform((s) => s.trim().slice(0, 100)).catch("").default(""),
+  category: z.string().trim().max(120).regex(/^[A-Za-z0-9_-]*$/).catch("").default(""),
+  manufacturer: z.string().trim().max(120).catch("").default(""),
+  condition: z.enum(CONDITION_VALUES).or(z.literal("")).catch("").default(""),
+  availability: z.enum(AVAILABILITY_VALUES).or(z.literal("")).catch("").default(""),
+  page: z.coerce.number().int().min(1).max(1000).catch(1).default(1),
+});

@@ -1,46 +1,46 @@
 "use server";
 
-import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { inquirySchema, firstIssueMessage } from "@/lib/validators";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
-/** Simple in-memory rate limit: max 5 inquiry submissions per minute per IP. */
-const hits = new Map<string, number[]>();
-const WINDOW_MS = 60_000;
-const MAX_HITS = 5;
+export type InquiryResult =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const list = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  list.push(now);
-  hits.set(ip, list);
-  return list.length > MAX_HITS;
-}
-
-export async function submitInquiry(
-  form: FormData
-): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function submitInquiry(form: FormData): Promise<InquiryResult> {
+  const str = (k: string, max = 2000) => String(form.get(k) ?? "").slice(0, max);
   const data = {
-    productId: String(form.get("productId") || "") || null,
-    name: String(form.get("name") || "").trim(),
-    email: String(form.get("email") || "").trim(),
-    phone: String(form.get("phone") || "").trim() || null,
-    company: String(form.get("company") || "").trim() || null,
-    message: String(form.get("message") || "").trim(),
-    website: String(form.get("website") || "") || null,
+    productId: str("productId", 64) || null,
+    name: str("name").trim(),
+    email: str("email").trim(),
+    phone: str("phone").trim() || null,
+    company: str("company").trim() || null,
+    message: str("message").trim(),
+    website: str("website", 200) || null,
   };
 
   // Honeypot: silently accept spam without storing it.
   if (data.website) return { ok: true };
 
   const parsed = inquirySchema.safeParse(data);
-  if (!parsed.success) return { ok: false, error: firstIssueMessage(parsed.error) };
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0] ?? "");
+      if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+    }
+    return { ok: false, error: firstIssueMessage(parsed.error), fieldErrors };
+  }
 
-  const headerStore = await headers();
-  const ip =
-    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  if (isRateLimited(ip)) {
-    return { ok: false, error: "Too many inquiries. Please wait a minute and try again." };
+  // 5 per minute and 20 per day per IP. Uses Redis when configured (see lib/rate-limit.ts).
+  const ip = await getClientIp();
+  const [minute, day] = await Promise.all([
+    rateLimit("inquiry-min", ip, { limit: 5, windowSec: 60 }),
+    rateLimit("inquiry-day", ip, { limit: 20, windowSec: 86_400 }),
+  ]);
+  if (!minute.ok || !day.ok) {
+    return { ok: false, error: "Too many inquiries. Please wait a while and try again." };
   }
 
   try {

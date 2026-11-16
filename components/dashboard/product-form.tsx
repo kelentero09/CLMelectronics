@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toaster";
 import { createProduct, updateProduct } from "@/app/actions/products";
 import { Input, Textarea, Select, Label, Checkbox, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { slugify } from "@/lib/utils";
+import { downscaleFormImages } from "@/lib/client-image";
 import { MAX_IMAGES_PER_PRODUCT, MAX_IMAGE_SIZE_BYTES, ALLOWED_IMAGE_MIME_TYPES } from "@/lib/catalog";
 
 export type ProductFormInitial = {
@@ -65,6 +66,17 @@ export function ProductForm({
   const [previews, setPreviews] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  // Warn before leaving the page with unsaved edits.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const usedSlots = (existingImageCount ?? 0) + previews.length;
   const slotsLeft = useMemo(() => Math.max(0, MAX_IMAGES_PER_PRODUCT - (existingImageCount ?? 0)), [existingImageCount]);
@@ -101,8 +113,10 @@ export function ProductForm({
     try {
       const form = new FormData(e.currentTarget);
       form.set("specifications", JSON.stringify(specs.filter((s) => s.key.trim() && s.value.trim())));
+      await downscaleFormImages(form, "images");
       const result = mode === "create" ? await createProduct(form) : await updateProduct(productId!, form);
       if (result.ok) {
+        setDirty(false);
         toast.success(mode === "create" ? "Product created" : "Product updated");
         router.push("/admin/products");
         router.refresh();
@@ -117,7 +131,7 @@ export function ProductForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid max-w-3xl gap-4" aria-label={mode === "create" ? "New product" : "Edit product"}>
+    <form onSubmit={handleSubmit} onChange={() => setDirty(true)} className="grid max-w-3xl gap-4" aria-label={mode === "create" ? "New product" : "Edit product"}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Label htmlFor="pf-name">Name *</Label>

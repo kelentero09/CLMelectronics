@@ -76,3 +76,51 @@ export const getCatalogFacets = unstable_cache(
   ["catalog-facets"],
   { revalidate: 300, tags: ["catalog-facets"] }
 );
+
+export type CatalogFilters = {
+  q: string;
+  categoryId: string | null;
+  manufacturer: string;
+  condition: string;
+  availability: string;
+  page: number;
+  pageSize: number;
+};
+
+/**
+ * One page of catalog cards + total count, cached for 5 minutes per unique
+ * filter combination. Shares the `catalog-facets` tag that every product /
+ * category mutation already busts via updateTag, so edits appear immediately.
+ */
+export const getCatalogPage = unstable_cache(
+  async (f: CatalogFilters): Promise<{ products: ProductCardData[]; total: number }> => {
+    const where: Prisma.ProductWhereInput = { published: true, deletedAt: null };
+    if (f.categoryId) where.categoryId = f.categoryId;
+    if (f.condition) where.condition = f.condition as Prisma.ProductWhereInput["condition"];
+    if (f.availability) where.availability = f.availability as Prisma.ProductWhereInput["availability"];
+    if (f.manufacturer) where.manufacturer = f.manufacturer;
+    if (f.q) {
+      // Short, indexed columns only; `description` (unindexed Text) is excluded on purpose.
+      where.OR = [
+        { name: { contains: f.q, mode: "insensitive" } },
+        { referenceCode: { contains: f.q, mode: "insensitive" } },
+        { model: { contains: f.q, mode: "insensitive" } },
+        { partNumber: { contains: f.q, mode: "insensitive" } },
+        { manufacturer: { contains: f.q, mode: "insensitive" } },
+      ];
+    }
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        select: productCardSelect,
+        orderBy: { createdAt: "desc" },
+        skip: (f.page - 1) * f.pageSize,
+        take: f.pageSize,
+      }),
+      prisma.product.count({ where }),
+    ]);
+    return { products, total };
+  },
+  ["catalog-page"],
+  { revalidate: 300, tags: ["catalog-facets"] }
+);

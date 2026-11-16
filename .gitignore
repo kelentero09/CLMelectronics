@@ -21,3 +21,7 @@ Thumbs.db
 
 # Uploads scratch (production uses Supabase Storage)
 public/uploads/
+
+# Build caches / local artifacts
+*.tsbuildinfo
+*.pptx

@@ -197,7 +197,7 @@ export default async function CompanyProfileHomePage() {
             <div className="mt-8 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
               {featured.map((p, i) => (
                 <Reveal key={p.id} delay={Math.min(i * 80, 320)} className="[&>*]:h-full">
-                  <ProductCard product={p} />
+                  <ProductCard product={p} morph />
                 </Reveal>
               ))}
             </div>

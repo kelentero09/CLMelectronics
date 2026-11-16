@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Input, Select } from "@/components/ui/form";
@@ -96,7 +97,7 @@ export default async function AdminRepairsPage({ searchParams }: { searchParams:
                 <td className="px-3 py-2">
                   {r.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={encodeURI(r.image)} alt={r.boardDescription} loading="lazy" className="h-10 w-14 rounded border border-slate-200 bg-white object-contain" />
+                    <Image src={encodeURI(r.image)} alt={r.boardDescription} width={56} height={40} sizes="56px" className="h-10 w-14 rounded border border-slate-200 bg-white object-contain" />
                   ) : (
                     <span className="text-xs text-slate-400">No photo</span>
                   )}

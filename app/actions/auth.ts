@@ -3,92 +3,76 @@
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/auth";
 import { sendMail, buildRecoveryHtml, isEmailConfigured } from "@/lib/email";
+import { getSiteUrl } from "@/lib/site-url";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
-export type AuthActionResult = { ok: true; message?: string; recoveryLink?: string } | { ok: false; error: string };
+export type AuthActionResult = { ok: true; message?: string } | { ok: false; error: string };
 
-function isEmailRateLimitMessage(msg: string): boolean {
-  return /rate limit|too many requests|over_email|email.*limit|429/i.test(msg);
-}
-
-function rateLimitMessage(): string {
-  return "Supabase Auth rate limit hit (generating recovery link). Wait a minute and try again.";
-}
-
-async function getSiteUrl(): Promise<string> {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  const isLocalhostRaw = raw === "http://localhost:3000" || raw === "https://localhost:3000" || raw === "http://localhost:3000/" || raw === "https://localhost:3000/";
-  if (raw && !isLocalhostRaw) return raw.replace(/\/$/, "");
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-    try {
-      const { headers } = await import("next/headers");
-      const h = await headers();
-      const host = h.get("host");
-      const proto = h.get("x-forwarded-proto") || "https";
-      if (host && !host.includes("localhost")) {
-        return `${proto}://${host}`.replace(/\/$/, "");
-      }
-    } catch {}
-    const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
-    if (vercelUrl) {
-      const withProto = vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
-      if (!withProto.includes("localhost")) return withProto.replace(/\/$/, "");
-    }
-    if (isLocalhostRaw) {
-      console.warn(`[getSiteUrl] NEXT_PUBLIC_SITE_URL is localhost but running on Vercel — using Vercel host if available. Set NEXT_PUBLIC_SITE_URL to https://<your-vercel>.vercel.app in Vercel env and redeploy.`);
-    }
-  }
-  if (raw) return raw.replace(/\/$/, "");
-  return "http://localhost:3000";
-}
+const GENERIC_RESET_MESSAGE =
+  "If an active admin account exists for that email, a password reset link has been sent.";
 
 /**
- * Public password-reset — verifies the email belongs to an active admin
- * BEFORE asking Supabase to send an email. This prevents the confusing
- * "email sent" for unknown addresses and gives correct feedback.
+ * Public password-reset.
+ * Security:
+ * - Always returns the same message, so it cannot be used to discover admin emails.
+ * - Rate limited per IP and per email.
+ * - The recovery link is NEVER returned to the browser (that would allow account
+ *   takeover by anyone who knows an admin email). Without SMTP it is only logged
+ *   on the server in development.
  */
 export async function requestPasswordReset(emailRaw: string): Promise<AuthActionResult> {
   const email = String(emailRaw ?? "").trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, error: "Enter a valid email address." };
+  }
+
+  const ip = await getClientIp();
+  const [byIp, byEmail] = await Promise.all([
+    rateLimit("pw-reset-ip", ip, { limit: 5, windowSec: 15 * 60 }),
+    rateLimit("pw-reset-email", email, { limit: 3, windowSec: 60 * 60 }),
+  ]);
+  if (!byIp.ok || !byEmail.ok) {
+    return { ok: false, error: "Too many reset requests. Please try again later." };
   }
 
   try {
     const appUser = await prisma.user.findUnique({ where: { email } });
-    if (!appUser) {
-      return { ok: false, error: "No admin account found with that email." };
-    }
-    if (appUser.isActive === false) {
-      return { ok: false, error: "That account has been disabled. Contact an admin." };
+    if (!appUser || appUser.isActive === false) {
+      return { ok: true, message: GENERIC_RESET_MESSAGE };
     }
 
     const supabase = createSupabaseServiceClient();
-    const siteUrl = await getSiteUrl();
+    const siteUrl = getSiteUrl();
     const redirectTo = `${siteUrl}/auth/callback?next=/auth/update-password`;
 
-    // Bypass Supabase mailer: generate link + Node mailer (free, no Supabase quota)
     const { data, error } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
       options: { redirectTo },
     });
     if (error) {
-      if (isEmailRateLimitMessage(error.message)) return { ok: false, error: rateLimitMessage() };
-      return { ok: false, error: error.message };
+      console.error("[requestPasswordReset] generateLink", error.message);
+      return { ok: true, message: GENERIC_RESET_MESSAGE };
     }
-    const actionLink = (data as unknown as { properties?: { action_link?: string } })?.properties?.action_link || (data as unknown as { action_link?: string })?.action_link;
-    if (!actionLink) return { ok: false, error: "Failed to generate recovery link." };
+    const actionLink = data?.properties?.action_link;
+    if (!actionLink) return { ok: true, message: GENERIC_RESET_MESSAGE };
+
+    if (!isEmailConfigured()) {
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[requestPasswordReset] SMTP not configured. Dev recovery link for ${email}:\n${actionLink}`);
+      } else {
+        console.error("[requestPasswordReset] SMTP not configured; reset email not sent.");
+      }
+      return { ok: true, message: GENERIC_RESET_MESSAGE };
+    }
 
     const html = buildRecoveryHtml(actionLink, email, siteUrl);
     const sent = await sendMail({ to: email, subject: "Reset your CLM Admin password", html });
-    if (!sent.ok && !isEmailConfigured()) {
-      // No SMTP — return link for manual copy (still bypasses Supabase mailer, zero cost)
-      return { ok: true, message: "Recovery link generated (email not configured — copy link below). Set SMTP_* in .env to auto-send.", recoveryLink: actionLink };
-    }
-    if (!sent.ok) return { ok: false, error: sent.error };
-    return { ok: true, message: "Password reset email sent via Node mailer — no Supabase rate limit." };
+    if (!sent.ok) console.error("[requestPasswordReset] sendMail", sent.error);
+    return { ok: true, message: GENERIC_RESET_MESSAGE };
   } catch (e) {
     console.error("[requestPasswordReset]", e);
-    return { ok: false, error: "Could not send reset email. Try again." };
+    return { ok: false, error: "Could not process the request. Try again later." };
   }
 }
 
@@ -97,7 +81,7 @@ export async function requestPasswordReset(emailRaw: string): Promise<AuthAction
  * Must be called after the user has clicked the email link and has a valid session.
  */
 export async function updatePassword(newPassword: string): Promise<AuthActionResult> {
-  if (!newPassword || newPassword.length < 8) {
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
   }
   if (newPassword.length > 128) {
@@ -105,8 +89,21 @@ export async function updatePassword(newPassword: string): Promise<AuthActionRes
   }
   try {
     const supabase = await createSupabaseServerClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      return { ok: false, error: "Your reset link has expired. Request a new one." };
+    }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (/same|different from the old/i.test(error.message)) {
+        return { ok: false, error: "New password must be different from the old one." };
+      }
+      if (/weak|pwned|leaked/i.test(error.message)) {
+        return { ok: false, error: "That password is too weak or has appeared in a data breach. Choose another." };
+      }
+      console.error("[updatePassword]", error.message);
+      return { ok: false, error: "Could not update password. Request a new link and try again." };
+    }
     return { ok: true, message: "Password updated. You can now sign in." };
   } catch (e) {
     console.error("[updatePassword]", e);

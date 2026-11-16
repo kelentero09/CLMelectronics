@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createSupabaseBrowserClient } from "@/lib/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { updatePassword } from "@/app/actions/auth";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";

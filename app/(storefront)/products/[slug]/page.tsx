@@ -1,4 +1,7 @@
+import { cache } from "react";
 import Link from "next/link";
+import type { Metadata } from "next";
+import { MessageSquare } from "lucide-react";
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -10,6 +13,7 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
 import { Badge } from "@/components/ui/card";
 import { DownloadSpecSheet } from "@/components/storefront/product-detail/download-spec-sheet";
+import { jsonLdString } from "@/lib/json-ld";
 
 // ISR: detail pages are cached for 5 minutes and pre-rendered at build
 // time; admin edits revalidate them, so repeat visits skip the database.
@@ -32,17 +36,36 @@ type DetailProduct = Prisma.ProductGetPayload<{
   include: { category: { select: { name: true; slug: true } }; images: true };
 }>;
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+/** One query per request, shared by generateMetadata and the page (React cache). */
+const getProduct = cache(async (slug: string): Promise<DetailProduct | null> => {
+  return prisma.product.findFirst({
+    where: { slug, published: true, deletedAt: null },
+    include: {
+      category: { select: { name: true, slug: true } },
+      images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
+    },
+  });
+});
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const product = await prisma.product.findFirst({
-      where: { slug, published: true, deletedAt: null },
-      select: { name: true, shortDescription: true, referenceCode: true },
-    });
-    if (!product) return { title: "Product not found" };
+    const product = await getProduct(slug);
+    if (!product) return { title: "Product not found", robots: { index: false } };
+    const description =
+      product.shortDescription ||
+      `Inquire about ${product.name} (${product.referenceCode}) at CLM Electronics Engineering Services.`;
+    const image = product.images[0]?.url;
     return {
       title: product.name,
-      description: product.shortDescription || `Inquire about ${product.name} (${product.referenceCode}) at CLM Electronics Engineering Services.`,
+      description,
+      alternates: { canonical: `/products/${product.slug}` },
+      openGraph: {
+        title: product.name,
+        description,
+        type: "website",
+        ...(image ? { images: [{ url: image, alt: product.images[0]?.alt || product.name }] } : {}),
+      },
     };
   } catch {
     return { title: "Product" };
@@ -56,13 +79,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   let product: DetailProduct | null = null;
   let related: ProductCardData[] = [];
   try {
-    product = await prisma.product.findFirst({
-      where: { slug, published: true, deletedAt: null },
-      include: {
-        category: { select: { name: true, slug: true } },
-        images: { orderBy: [{ isPrimary: "desc" }, { position: "asc" }] },
-      },
-    });
+    product = await getProduct(slug);
     if (product?.categoryId) {
       related = await prisma.product.findMany({
         where: { categoryId: product.categoryId, published: true, deletedAt: null, id: { not: product.id } },
@@ -86,6 +103,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     brand: product.manufacturer ? { "@type": "Brand", name: product.manufacturer } : undefined,
     description: product.shortDescription || product.name,
     url: `${siteUrl}/products/${product.slug}`,
+    image: product.images.map((i) => i.url).slice(0, 5),
+    category: product.category?.name,
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Catalog", item: `${siteUrl}/products` },
+      ...(product.category
+        ? [{ "@type": "ListItem", position: 2, name: product.category.name, item: `${siteUrl}/categories/${product.category.slug}` }]
+        : []),
+      { "@type": "ListItem", position: product.category ? 3 : 2, name: product.name, item: `${siteUrl}/products/${product.slug}` },
+    ],
   };
 
   return (
@@ -105,7 +135,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       </nav>
 
       <div className="mt-4 grid gap-8 lg:grid-cols-2">
-        <ProductGallery images={product.images} productName={product.name} referenceCode={product.referenceCode} />
+        <ProductGallery productId={product.id} images={product.images} productName={product.name} referenceCode={product.referenceCode} />
         <div>
           <div className="flex flex-wrap gap-2">
             <Badge className={product.availability === "IN_STOCK" ? "bg-emerald-600 text-white border-transparent" : "bg-slate-100 text-slate-700 border-slate-200"}>
@@ -131,7 +161,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               View Datasheet / Document
             </a>
           )}
-          <DownloadSpecSheet productId={product.id} productName={product.name} className="mt-4" />
+          <div className="mt-4 flex flex-wrap items-start gap-3">
+            <a href="#inquire" className="inline-flex h-10 items-center gap-2 rounded-md bg-steel-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-steel-600">
+              <MessageSquare className="h-4 w-4" aria-hidden /> Inquire about this product
+            </a>
+            <DownloadSpecSheet slug={product.slug} productName={product.name} />
+          </div>
         </div>
       </div>
 
@@ -154,7 +189,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       )}
 
       <Reveal className="mt-8 max-w-2xl">
-      <section aria-label="Product inquiry">
+      <section id="inquire" aria-label="Product inquiry" className="scroll-mt-24">
         <InquiryForm productId={product.id} productLabel={`${product.name} (${product.referenceCode})`} />
       </section>
       </Reveal>
@@ -165,14 +200,23 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
             {related.map((p, i) => (
               <Reveal key={p.id} delay={Math.min(i * 60, 240)} className="[&>*]:h-full">
-                <ProductCard product={p} />
+                <ProductCard product={p} morph />
               </Reveal>
             ))}
           </div>
         </section>
       )}
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {/* Mobile sticky call-to-action */}
+      <div data-mobile-cta className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur animate-slide-up-in lg:hidden">
+        <a href="#inquire" className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-steel-500 text-sm font-semibold text-white active:scale-[0.98]">
+          <MessageSquare className="h-4 w-4" aria-hidden /> Inquire about this product
+        </a>
+      </div>
+      <div className="h-16 lg:hidden" aria-hidden />
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }} />
     </div>
   );
 }

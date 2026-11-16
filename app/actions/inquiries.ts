@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
@@ -18,6 +19,7 @@ export async function updateInquiryStatus(
     revalidatePath("/admin");
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
     console.error("[inquiries action]", e);
     return { ok: false, error: "Could not update inquiry status." };
   }

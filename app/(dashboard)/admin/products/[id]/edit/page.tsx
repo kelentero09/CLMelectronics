@@ -18,7 +18,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const [p, cats] = await Promise.all([
       prisma.product.findUnique({
         where: { id },
-        include: { images: { orderBy: { position: "asc" } } },
+        include: { images: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
       }),
       prisma.category.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
     ]);

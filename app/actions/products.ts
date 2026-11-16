@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
@@ -87,6 +88,7 @@ export async function createProduct(form: FormData): Promise<ActionResult> {
           },
         });
       } catch (e) {
+        unstable_rethrow(e);
         console.error("[products action] image upload failed", e);
       }
     }
@@ -94,6 +96,7 @@ export async function createProduct(form: FormData): Promise<ActionResult> {
     revalidateCatalog();
     return { ok: true, id: product.id, slug: product.slug };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -131,6 +134,7 @@ export async function updateProduct(id: string, form: FormData): Promise<ActionR
           },
         });
       } catch (e) {
+        unstable_rethrow(e);
         console.error("[products action] image upload failed", e);
       }
     }
@@ -138,6 +142,7 @@ export async function updateProduct(id: string, form: FormData): Promise<ActionR
     revalidateCatalog(product.slug);
     return { ok: true, id: product.id, slug: product.slug };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -153,6 +158,7 @@ export async function togglePublish(id: string, published: boolean): Promise<Act
     revalidateCatalog(product.slug);
     return { ok: true, id: product.id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -168,6 +174,7 @@ export async function softDeleteProduct(id: string): Promise<ActionResult> {
     revalidateCatalog(product.slug);
     return { ok: true, id: product.id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -179,6 +186,7 @@ export async function restoreProduct(id: string): Promise<ActionResult> {
     revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -207,6 +215,7 @@ export async function deleteImage(imageId: string): Promise<ActionResult> {
       try {
         await deleteProductImage(path);
       } catch (e) {
+        unstable_rethrow(e);
         console.error("[products action] storage cleanup failed (DB row already deleted)", e);
       }
     }
@@ -214,6 +223,7 @@ export async function deleteImage(imageId: string): Promise<ActionResult> {
     revalidateCatalog(image.product.slug);
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -235,6 +245,40 @@ export async function setPrimaryImage(imageId: string): Promise<ActionResult> {
     revalidateCatalog(image.product.slug);
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
+    return fail(e);
+  }
+}
+
+/** Moves an image one slot earlier/later in its product's gallery order. */
+export async function moveImage(imageId: string, direction: "up" | "down"): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    if (direction !== "up" && direction !== "down") return { ok: false, error: "Invalid direction" };
+    const image = await prisma.productImage.findUnique({
+      where: { id: imageId },
+      include: { product: { select: { slug: true } } },
+    });
+    if (!image) return { ok: false, error: "Image not found" };
+
+    const siblings = await prisma.productImage.findMany({
+      where: { productId: image.productId },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      select: { id: true },
+    });
+    const order = siblings.map((s) => s.id);
+    const from = order.indexOf(imageId);
+    const to = direction === "up" ? from - 1 : from + 1;
+    if (from < 0 || to < 0 || to >= order.length) return { ok: true };
+    [order[from], order[to]] = [order[to], order[from]];
+
+    await prisma.$transaction(
+      order.map((id, position) => prisma.productImage.update({ where: { id }, data: { position } }))
+    );
+    revalidateCatalog(image.product.slug);
+    return { ok: true };
+  } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }

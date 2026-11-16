@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -41,25 +42,37 @@ export function ProductImagePlaceholder({ referenceCode }: { referenceCode: stri
   );
 }
 
-export function ProductCard({ product }: { product: CardProduct }) {
+/**
+ * @param morph Give the image a shared view-transition name so it morphs into the
+ *   product detail hero. Enable only where each product appears once per page.
+ */
+export function ProductCard({ product, morph = false }: { product: CardProduct; morph?: boolean }) {
   const primary = product.images?.[0]?.url || null;
   const manufacturer = typeof product.manufacturer === "string" ? product.manufacturer : product.manufacturer?.name;
 
+  const image = primary ? (
+    <Image
+      src={primary}
+      alt={product.images[0]?.alt || product.name}
+      fill
+      sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 400px"
+      loading="lazy"
+      className="object-contain transition-transform duration-300 ease-out group-hover:scale-105 motion-reduce:group-hover:scale-100"
+    />
+  ) : (
+    <ProductImagePlaceholder referenceCode={product.referenceCode} />
+  );
+
   return (
-    <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="group flex flex-col overflow-hidden transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0">
       <div className="relative aspect-[4/3] overflow-hidden bg-white border border-slate-200">
         <Link href={`/products/${product.slug}`} className="block w-full h-full" aria-label={`View ${product.name}`}>
-          {primary ? (
-            <Image
-              src={primary}
-              alt={product.images[0]?.alt || product.name}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 400px"
-              loading="lazy"
-              className="object-contain transition-transform duration-300 group-hover:scale-100"
-            />
+          {morph ? (
+            <ViewTransition name={`product-${product.id}`} share="morph" default="none">
+              <div className="relative h-full w-full">{image}</div>
+            </ViewTransition>
           ) : (
-            <ProductImagePlaceholder referenceCode={product.referenceCode} />
+            image
           )}
         </Link>
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1 pointer-events-none">

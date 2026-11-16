@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Input, Label, FieldError } from "@/components/ui/form";
+import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, Badge, Pagination } from "@/components/ui/card";
 import { inviteUser, resendInvite, toggleUserActive, removeUser } from "@/app/actions/users";
@@ -129,8 +130,8 @@ export function UsersManager({
     });
   }
 
-  function handleRemove(user: UserRow) {
-    if (!confirm(`Remove ${user.email}? They will lose admin access and need a new invite to return.`)) return;
+  async function handleRemove(user: UserRow) {
+    if (!(await confirmDialog({ title: `Remove ${user.email}?`, description: "They will lose admin access and need a new invite to return.", confirmLabel: "Remove user", tone: "danger" }))) return;
     startTransition(async () => {
       const res = await removeUser(user.id);
       if (!res.ok) {

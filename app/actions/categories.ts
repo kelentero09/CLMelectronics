@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
@@ -41,6 +42,7 @@ export async function createCategory(form: FormData): Promise<ActionResult> {
     revalidateCatalog();
     return { ok: true, id: category.id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e, "Could not create category. The name or slug may already exist.");
   }
 }
@@ -63,6 +65,7 @@ export async function updateCategory(id: string, form: FormData): Promise<Action
     revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e, "Could not update category. The name or slug may already exist.");
   }
 }
@@ -74,6 +77,7 @@ export async function toggleCategoryActive(id: string, isActive: boolean): Promi
     revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
@@ -92,6 +96,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     revalidateCatalog();
     return { ok: true, id };
   } catch (e) {
+    unstable_rethrow(e);
     return fail(e);
   }
 }
