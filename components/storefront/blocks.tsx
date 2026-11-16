@@ -371,9 +371,6 @@ export function BrandStrip({ className }: { className?: string }) {
           </li>
         ))}
       </ul>
-      <p className="mt-6 text-center text-[11px] text-slate-400">
-        Trademarks belong to their respective owners. Shown as equipment CLM services, not an authorized distributorship.
-      </p>
     </div>
   );
 }
