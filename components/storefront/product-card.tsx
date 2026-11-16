@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/card";
 import { Card, CardContent } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AVAILABILITY_LABELS, CONDITION_LABELS } from "@/lib/catalog";
 import { CompareCheckbox } from "./compare-checkbox";
@@ -57,16 +56,16 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
       fill
       sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 400px"
       loading="lazy"
-      className="object-contain transition-transform duration-300 ease-out group-hover:scale-105 motion-reduce:group-hover:scale-100"
+      className="object-contain p-2 transition-transform duration-500 ease-out group-hover:scale-105 motion-reduce:group-hover:scale-100"
     />
   ) : (
     <ProductImagePlaceholder referenceCode={product.referenceCode} />
   );
 
   return (
-    <Card className="group flex flex-col overflow-hidden transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0">
-      <div className="relative aspect-[4/3] overflow-hidden bg-white border border-slate-200">
-        <Link href={`/products/${product.slug}`} className="block w-full h-full" aria-label={`View ${product.name}`}>
+    <Card className="group relative flex flex-col overflow-hidden rounded-2xl transition-[box-shadow,transform,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-steel-500/30 hover:shadow-xl hover:shadow-navy-900/5 motion-reduce:hover:translate-y-0">
+      <div className="relative aspect-[4/3] overflow-hidden border-b border-slate-100 bg-gradient-to-b from-white to-slate-50">
+        <Link href={`/products/${product.slug}`} className="block h-full w-full" tabIndex={-1} aria-hidden="true">
           {morph ? (
             <ViewTransition name={`product-${product.id}`} share="morph" default="none">
               <div className="relative h-full w-full">{image}</div>
@@ -75,7 +74,7 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
             image
           )}
         </Link>
-        <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1 pointer-events-none">
+        <div className="absolute left-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap gap-1 pointer-events-none">
           <Badge className={cn(availabilityStyle(product.availability))}>
             {AVAILABILITY_LABELS[product.availability] ?? product.availability}
           </Badge>
@@ -85,18 +84,18 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
             </Badge>
           )}
         </div>
-        <div className="absolute right-2 top-2 pointer-events-auto">
+        <div className="pointer-events-auto absolute right-2 top-2 z-10">
           <CompareCheckbox productId={product.id} productName={product.name} />
         </div>
       </div>
-      <CardContent className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
+      <CardContent className="flex flex-1 flex-col gap-1.5 p-3.5 sm:p-5">
         <p className="truncate text-[10px] font-bold uppercase tracking-wider text-steel-600 sm:text-[11px]">
           {product.category?.name ?? "Catalog"}
           {product.partNumber ? ` • ${product.partNumber}` : ""}
         </p>
         <Link
           href={`/products/${product.slug}`}
-          className="line-clamp-2 min-h-[2.2rem] text-[13px] font-semibold leading-tight hover:text-steel-600 sm:min-h-[2.6rem] sm:text-sm"
+          className="line-clamp-2 min-h-[2.2rem] text-[13px] font-bold leading-snug text-navy-900 transition-colors after:absolute after:inset-0 hover:text-steel-600 sm:min-h-[2.6rem] sm:text-[15px]"
         >
           {product.name}
         </Link>
@@ -108,13 +107,14 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
           {product.model ? ` • ${product.model}` : ""}
           {manufacturer ? ` • ${manufacturer}` : ""}
         </p>
-        <div className="mt-auto flex items-center justify-end border-t border-dashed pt-2 sm:pt-3">
-          <Link
-            href={`/products/${product.slug}`}
-            className={buttonVariants({ size: "sm", className: "h-8 gap-1 px-3 text-[11px] font-bold uppercase tracking-wide" })}
+        <div className="pointer-events-none mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+          <span className="text-xs font-semibold text-slate-500">View details</span>
+          <span
+            aria-hidden
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-navy-900 text-white transition-[background-color,transform] duration-200 group-hover:translate-x-0.5 group-hover:bg-steel-500"
           >
-            Inquire <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+            <ArrowRight className="h-4 w-4" />
+          </span>
         </div>
       </CardContent>
     </Card>

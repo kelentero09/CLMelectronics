@@ -1,3 +1,5 @@
+import { HeaderSkeleton } from "@/components/storefront/header-skeleton";
+
 /**
  * Instant loading skeleton for /products (and detail pages). Shows
  * immediately on navigation while the server streams the real catalog,
@@ -5,9 +7,10 @@
  */
 export default function ProductsLoading() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6" aria-label="Loading products">
-      <div className="h-8 w-48 rounded skeleton" />
-      <div className="mt-4 flex gap-2 overflow-hidden">
+    <div role="status" aria-label="Loading products">
+    <HeaderSkeleton />
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div className="flex gap-2 overflow-hidden">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="h-9 w-28 shrink-0 rounded-full skeleton" />
         ))}
@@ -40,6 +43,7 @@ export default function ProductsLoading() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

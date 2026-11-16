@@ -13,12 +13,12 @@ export function EmptyState({
   showContact?: boolean;
 }) {
   return (
-    <Card className="border-2 border-dashed">
+    <Card className="rounded-2xl border-2 border-dashed shadow-none">
       <CardContent className="space-y-3 py-16 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-900/10 text-navy-900">
           <PackageSearch className="h-7 w-7" />
         </div>
-        <p className="text-2xl font-bold uppercase tracking-tight">{title}</p>
+        <p className="text-2xl font-bold tracking-tight text-navy-900">{title}</p>
         <p className="mx-auto max-w-md text-sm text-slate-500">{text}</p>
         <div className="flex justify-center gap-2">
           <Link href="/products" className={buttonVariants()}>

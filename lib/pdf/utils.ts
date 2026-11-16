@@ -1,13 +1,3 @@
-import { BRAND_COLORS, PDF_CONTENT_WIDTH } from "./types";
-
-export function formatDate(date: Date = new Date()): string {
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 export function formatAvailability(availability: string): string {
   const labels: Record<string, string> = {
     IN_STOCK: "Available",
@@ -39,17 +29,6 @@ export function sanitizeFilename(name: string): string {
     .substring(0, 80);
 }
 
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + "...";
+export function formatPdfDate(date: Date): string {
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
-
-export const SPEC_TABLE_COL_WIDTHS = {
-  key: PDF_CONTENT_WIDTH * 0.35,
-  value: PDF_CONTENT_WIDTH * 0.65,
-};
-
-export const INFO_TABLE_COL_WIDTHS = {
-  label: PDF_CONTENT_WIDTH * 0.25,
-  value: PDF_CONTENT_WIDTH * 0.75,
-};

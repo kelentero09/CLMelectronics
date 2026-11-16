@@ -1,7 +1,6 @@
 import { cache } from "react";
-import Link from "next/link";
 import type { Metadata } from "next";
-import { MessageSquare } from "lucide-react";
+import { FileText, MessageSquare } from "lucide-react";
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -13,7 +12,9 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
 import { Badge } from "@/components/ui/card";
 import { DownloadSpecSheet } from "@/components/storefront/product-detail/download-spec-sheet";
+import { Specifications } from "@/components/storefront/product-detail/specifications";
 import { jsonLdString } from "@/lib/json-ld";
+import { Breadcrumbs } from "@/components/storefront/blocks";
 
 // ISR: detail pages are cached for 5 minutes and pre-rendered at build
 // time; admin edits revalidate them, so repeat visits skip the database.
@@ -119,22 +120,16 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <nav aria-label="Breadcrumb" className="text-xs text-slate-500">
-        <Link href="/products" className="hover:underline">Catalog</Link>
-        {" / "}
-        {product.category ? (
-          <>
-            <Link href={`/categories/${product.category.slug}`} className="hover:underline">
-              {product.category.name}
-            </Link>
-            {" / "}
-          </>
-        ) : null}
-        <span aria-current="page" className="font-semibold text-navy-900">{product.name}</span>
-      </nav>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+      <Breadcrumbs
+        items={[
+          { label: "Products", href: "/products" },
+          ...(product.category ? [{ label: product.category.name, href: `/categories/${product.category.slug}` }] : []),
+          { label: product.name },
+        ]}
+      />
 
-      <div className="mt-4 grid gap-8 lg:grid-cols-2">
+      <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
         <ProductGallery productId={product.id} images={product.images} productName={product.name} referenceCode={product.referenceCode} />
         <div>
           <div className="flex flex-wrap gap-2">
@@ -146,23 +141,23 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             )}
             {product.featured && <Badge>Featured</Badge>}
           </div>
-          <h1 className="mt-2 text-2xl font-bold text-navy-900 sm:text-3xl">{product.name}</h1>
-          {product.category && <p className="mt-1 text-sm font-semibold text-steel-600">{product.category.name}</p>}
-          <dl className="mt-4 grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2">
+          {product.category && <p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-steel-600">{product.category.name}</p>}
+          <h1 className="mt-2 text-balance text-3xl font-bold tracking-tight text-navy-900 sm:text-4xl">{product.name}</h1>
+          <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 text-sm [&>div]:bg-white [&>div]:p-4 [&_dd]:mt-1 [&_dd]:text-navy-900">
             <div><dt className="text-xs font-bold uppercase tracking-wider text-slate-500">Reference code</dt><dd className="font-mono font-semibold">{product.referenceCode}</dd></div>
             {product.model && <div><dt className="text-xs font-bold uppercase tracking-wider text-slate-500">Model</dt><dd className="font-semibold">{product.model}</dd></div>}
             {product.partNumber && <div><dt className="text-xs font-bold uppercase tracking-wider text-slate-500">Part number</dt><dd className="font-semibold">{product.partNumber}</dd></div>}
             {product.manufacturer && <div><dt className="text-xs font-bold uppercase tracking-wider text-slate-500">Manufacturer</dt><dd className="font-semibold">{product.manufacturer}</dd></div>}
           </dl>
-          {product.shortDescription && <p className="mt-4 font-medium text-slate-700">{product.shortDescription}</p>}
-          {product.description && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600">{product.description}</p>}
+          {product.shortDescription && <p className="mt-6 text-lg font-medium leading-relaxed text-slate-700">{product.shortDescription}</p>}
+          {product.description && <p className="mt-3 whitespace-pre-line leading-relaxed text-slate-600">{product.description}</p>}
           {product.datasheetUrl && (
-            <a href={product.datasheetUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-slate-50">
-              View Datasheet / Document
+            <a href={product.datasheetUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-steel-600 underline-offset-4 hover:text-navy-900 hover:underline">
+              <FileText className="h-4 w-4" aria-hidden /> View datasheet / document
             </a>
           )}
-          <div className="mt-4 flex flex-wrap items-start gap-3">
-            <a href="#inquire" className="inline-flex h-10 items-center gap-2 rounded-md bg-steel-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-steel-600">
+          <div className="mt-8 flex flex-wrap items-start gap-3 border-t border-slate-200 pt-6">
+            <a href="#inquire" className="inline-flex h-11 items-center gap-2 rounded-md bg-steel-500 px-5 text-sm font-semibold text-white shadow-lg shadow-steel-500/25 transition-[background-color,transform] hover:bg-steel-600 active:scale-[0.98]">
               <MessageSquare className="h-4 w-4" aria-hidden /> Inquire about this product
             </a>
             <DownloadSpecSheet slug={product.slug} productName={product.name} />
@@ -170,34 +165,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {specs.length > 0 && (
-        <section aria-label="Specifications" className="mt-8">
-          <h2 className="text-lg font-bold text-navy-900">Specifications</h2>
-          <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full min-w-[480px] border-collapse bg-white text-sm">
-              <tbody>
-                {specs.map((s, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-slate-50" : "bg-white"}>
-                    <th scope="row" className="w-1/3 px-4 py-2.5 text-left font-semibold text-navy-900">{s.key}</th>
-                    <td className="px-4 py-2.5 text-slate-600">{s.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      <Specifications specs={specs} productName={product.name} referenceCode={product.referenceCode} />
 
-      <Reveal className="mt-8 max-w-2xl">
+      <Reveal className="mt-16 max-w-3xl">
       <section id="inquire" aria-label="Product inquiry" className="scroll-mt-24">
         <InquiryForm productId={product.id} productLabel={`${product.name} (${product.referenceCode})`} />
       </section>
       </Reveal>
 
       {related.length > 0 && (
-        <section aria-label="Related products" className="mt-10">
-          <h2 className="text-lg font-bold text-navy-900">Related Products</h2>
-          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+        <section aria-label="Related products" className="mt-16 border-t border-slate-200 pt-12">
+          <h2 className="text-2xl font-bold tracking-tight text-navy-900">Related Products</h2>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
             {related.map((p, i) => (
               <Reveal key={p.id} delay={Math.min(i * 60, 240)} className="[&>*]:h-full">
                 <ProductCard product={p} morph />

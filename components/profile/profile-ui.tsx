@@ -1,33 +1,32 @@
 import type { ReactNode } from "react";
-import { Reveal } from "@/components/storefront/reveal";
+import { Eyebrow, PageHero } from "@/components/storefront/blocks";
 
 export function ProfileSectionHeader({
   eyebrow,
   title,
   description,
-  eyebrowClassName = "text-xs font-bold uppercase tracking-[0.2em] text-steel-600",
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  /** @deprecated styling is now shared; kept for compatibility. */
   eyebrowClassName?: string;
 }) {
   return (
     <div className="max-w-3xl">
-      {eyebrow && (
-        <p className={eyebrowClassName}>{eyebrow}</p>
-      )}
-      <h2 className="mt-2 text-2xl font-bold text-navy-900 sm:text-3xl">{title}</h2>
-      {description && <p className="mt-3 leading-relaxed text-slate-600">{description}</p>}
+      {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+      <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight text-navy-900 sm:text-4xl">{title}</h2>
+      {description && <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">{description}</p>}
     </div>
   );
 }
 
-export function ProfileCard({ title, children }: { title: string; children: ReactNode }) {
+export function ProfileCard({ title, eyebrow, children }: { title: string; eyebrow?: string; children: ReactNode }) {
   return (
-    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-      <h3 className="text-lg font-bold text-navy-900">{title}</h3>
-      <div className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{children}</div>
+    <article className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-lg motion-reduce:hover:translate-y-0 sm:p-8">
+      {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.18em] text-steel-600">{eyebrow}</p>}
+      <h3 className="mt-1 text-xl font-bold text-navy-900">{title}</h3>
+      <div className="mt-3 flex-1 text-base leading-relaxed text-slate-600">{children}</div>
     </article>
   );
 }
@@ -36,20 +35,29 @@ export function ProfilePageHero({
   eyebrow,
   title,
   description,
+  image,
+  imageAlt,
+  crumbs,
+  children,
 }: {
   eyebrow: string;
   title: string;
   description: string;
+  image?: string;
+  imageAlt?: string;
+  crumbs?: { label: string; href?: string }[];
+  children?: ReactNode;
 }) {
   return (
-    <section className="blueprint-grid bg-navy-950" aria-label="Page introduction">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
-        <Reveal>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent-400">{eyebrow}</p>
-        <h1 className="mt-2 max-w-3xl text-3xl font-bold text-white sm:text-4xl">{title}</h1>
-        <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">{description}</p>
-        </Reveal>
-      </div>
-    </section>
+    <PageHero
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      image={image}
+      imageAlt={imageAlt}
+      crumbs={crumbs ?? [{ label: eyebrow }]}
+    >
+      {children}
+    </PageHero>
   );
 }

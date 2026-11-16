@@ -1,10 +1,11 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("rounded-lg border border-slate-200 bg-white shadow-sm", className)} {...props} />
+    <div className={cn("rounded-xl border border-slate-200 bg-white shadow-sm", className)} {...props} />
   );
 }
 
@@ -105,7 +106,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
     : "text-xs text-slate-600";
 
   const buttonClasses = variant === "storefront"
-    ? "rounded border px-3 py-2 text-sm font-medium"
+    ? "inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors"
     : "rounded border px-2.5 py-1 text-xs font-medium";
 
   return (
@@ -116,7 +117,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
         </p>
       )}
       <div className="flex gap-1">
-        <a
+        <Link
           href={buildUrl(currentPage - 1)}
           className={cn(
             buttonClasses,
@@ -127,12 +128,13 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
           aria-disabled={currentPage === 1}
         >
           Previous
-        </a>
+        </Link>
         {getPageNumbers().map((page, i) =>
           typeof page === "number" ? (
-            <a
+            <Link
               key={i}
               href={buildUrl(page)}
+              aria-current={page === currentPage ? "page" : undefined}
               className={cn(
                 buttonClasses,
                 page === currentPage
@@ -141,14 +143,14 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
               )}
             >
               {page}
-            </a>
+            </Link>
           ) : (
             <span key={i} className="px-2.5 py-1 text-xs text-slate-400">
               {page}
             </span>
           )
         )}
-        <a
+        <Link
           href={buildUrl(currentPage + 1)}
           className={cn(
             buttonClasses,
@@ -159,7 +161,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, searchParams = {}
           aria-disabled={currentPage === totalPages}
         >
           Next
-        </a>
+        </Link>
       </div>
     </div>
   );

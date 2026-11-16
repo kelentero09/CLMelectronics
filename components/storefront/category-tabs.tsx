@@ -67,7 +67,7 @@ export function CategoryTabs({ links }: { links: CategoryTabLink[] }) {
     <div
       ref={barRef}
       className={cn(
-        "mt-4 flex items-center gap-1 border-b border-slate-200 bg-white transition-[padding] duration-150 max-lg:sticky max-lg:top-16 max-lg:z-40",
+        "flex items-center gap-1 bg-white transition-[padding] duration-150 max-lg:sticky max-lg:top-16 max-lg:z-40 max-lg:-mx-4 max-lg:px-4",
         stuck && "py-3 shadow-[0_6px_16px_-8px_rgba(10,22,40,0.35)]"
       )}
     >
@@ -83,7 +83,7 @@ export function CategoryTabs({ links }: { links: CategoryTabLink[] }) {
       <nav
         ref={scrollerRef}
         aria-label="Categories"
-        className="flex min-w-0 flex-1 flex-nowrap gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {links.map((l) => (
           <Link
@@ -91,13 +91,15 @@ export function CategoryTabs({ links }: { links: CategoryTabLink[] }) {
             href={l.href}
             aria-current={l.active ? "page" : undefined}
             className={cn(
-              "relative shrink-0 whitespace-nowrap pb-2.5 pt-1 text-[13px] font-semibold text-slate-500 hover:text-navy-900",
-              l.active && "text-navy-900 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-navy-900"
+              "shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors duration-150",
+              l.active
+                ? "border-navy-900 bg-navy-900 text-white shadow-sm"
+                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-navy-900"
             )}
           >
             {l.label}{" "}
             {typeof l.count === "number" && (
-              <span className="font-normal text-slate-400">({l.count})</span>
+              <span className={cn("ml-0.5 font-normal tabular-nums", l.active ? "text-slate-300" : "text-slate-400")}>{l.count}</span>
             )}
           </Link>
         ))}

@@ -51,6 +51,19 @@ function PhotoCell({ board, image }: { board: string; image: string | null }) {
   );
 }
 
+/** Repair rate with a small progress bar. */
+function RateBadge({ rate }: { rate: number }) {
+  const pct = Math.max(0, Math.min(100, rate));
+  return (
+    <span className="inline-flex items-center gap-2.5">
+      <span aria-hidden className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-slate-200 sm:block">
+        <span className="block h-full rounded-full bg-gradient-to-r from-steel-500 to-emerald-500" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="text-base font-bold tabular-nums text-navy-900">{rate}%</span>
+    </span>
+  );
+}
+
 export default function BoardRepairBrowser({ records }: { records: BoardRepairRecord[] }) {
   const [station, setStation] = useState("All");
   const [model, setModel] = useState("All");
@@ -75,33 +88,33 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
 
   return (
     <>
-      <section aria-label="Documented repair capability" className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+      <section aria-label="Documented repair capability" className="relative z-10 mx-auto -mt-10 max-w-7xl px-4 sm:px-6">
         <div className="grid gap-4 sm:grid-cols-3">
           {[
             [String(total), "Documented Repair Cases"],
             [`${highest}%`, "Highest Listed Repair Rate"],
             [String(processes), "Documented Processes"],
           ].map(([v, l]) => (
-            <div key={l} className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm">
-              <p className="text-3xl font-bold text-navy-900">{v}</p>
+            <div key={l} className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl shadow-navy-900/5">
+              <p className="text-4xl font-bold tracking-tight text-navy-900 tabular-nums">{v}</p>
               <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">{l}</p>
             </div>
           ))}
         </div>
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">
           Figures above are calculated dynamically from the documented records below — not overall
           company statistics. Repair rates shown are based on CLM&apos;s supplied service records and
           may vary depending on board condition and failure type.
         </p>
       </section>
 
-      <section aria-label="Filters" className="mx-auto max-w-7xl px-4 pt-8 sm:px-6">
-        <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3 sm:p-5">
+      <section aria-label="Filters" className="mx-auto max-w-7xl px-4 pt-12 sm:px-6">
+        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3 sm:p-6">
           <div>
             <label htmlFor="station-filter" className="mb-1 block text-xs font-bold uppercase tracking-wider text-navy-900">
               Station / Process
             </label>
-            <select id="station-filter" value={station} onChange={(e) => setStation(e.target.value)} className="w-full rounded border border-slate-300 bg-white px-3 py-2.5 text-sm">
+            <select id="station-filter" value={station} onChange={(e) => setStation(e.target.value)} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm transition-colors focus:border-steel-500">
               {stations.map((s) => (
                 <option key={s} value={s}>{s === "All" ? "All" : s}</option>
               ))}
@@ -111,7 +124,7 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
             <label htmlFor="model-filter" className="mb-1 block text-xs font-bold uppercase tracking-wider text-navy-900">
               Equipment / Model Type
             </label>
-            <select id="model-filter" value={model} onChange={(e) => setModel(e.target.value)} className="w-full rounded border border-slate-300 bg-white px-3 py-2.5 text-sm">
+            <select id="model-filter" value={model} onChange={(e) => setModel(e.target.value)} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm transition-colors focus:border-steel-500">
               {models.map((m) => (
                 <option key={m} value={m}>{m === "All" ? "All" : m}</option>
               ))}
@@ -127,7 +140,7 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search board, model, or problem…"
-              className="w-full rounded border border-slate-300 px-3 py-2.5 text-sm"
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm transition-colors placeholder:text-slate-400 focus:border-steel-500"
             />
           </div>
         </div>
@@ -136,8 +149,8 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
         </p>
       </section>
 
-      <section aria-label="Board repair records" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="hidden overflow-x-auto rounded-lg border border-slate-200 md:block">
+      <section aria-label="Board repair records" className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6">
+        <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 shadow-sm md:block">
           <table className="w-full min-w-[820px] border-collapse bg-white text-sm">
             <thead>
               <tr className="bg-navy-950 text-left text-xs uppercase tracking-wider text-white">
@@ -151,12 +164,12 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.id} className="border-t border-slate-200 align-top hover:bg-slate-50">
+                <tr key={r.id} className="border-t border-slate-100 align-top transition-colors hover:bg-steel-500/[0.03]">
                   <td className="whitespace-nowrap px-4 py-3 font-semibold text-navy-900">{r.station}</td>
                   <td className="whitespace-nowrap px-4 py-3">{r.model}</td>
                   <td className="max-w-[260px] px-4 py-3 font-medium">{r.boardDescription}</td>
                   <td className="max-w-[260px] px-4 py-3 text-slate-600">{r.problem}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-base font-bold text-navy-900">{r.repairRate}%</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right"><RateBadge rate={r.repairRate} /></td>
                   <td className="px-4 py-3"><PhotoCell board={r.boardDescription} image={r.image} /></td>
                 </tr>
               ))}
@@ -173,7 +186,7 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
 
         <div className="grid gap-4 md:hidden">
           {filtered.map((r) => (
-            <article key={r.id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm" aria-label={r.boardDescription}>
+            <article key={r.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-label={r.boardDescription}>
               <h2 className="font-bold text-navy-900">{r.boardDescription}</h2>
               <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 {r.model} · {r.station}
@@ -183,9 +196,9 @@ export default function BoardRepairBrowser({ records }: { records: BoardRepairRe
                   <dt className="font-semibold text-navy-900">Problem</dt>
                   <dd className="text-slate-600">{r.problem}</dd>
                 </div>
-                <div className="flex items-center justify-between rounded bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
                   <dt className="text-xs font-bold uppercase tracking-wider text-slate-500">Repair Rate</dt>
-                  <dd className="text-lg font-bold text-navy-900">{r.repairRate}%</dd>
+                  <dd><RateBadge rate={r.repairRate} /></dd>
                 </div>
                 <div>
                   <dt className="font-semibold text-navy-900">Photo</dt>

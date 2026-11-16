@@ -64,6 +64,7 @@ export default async function BoardRepairPage() {
         eyebrow="Board repair"
         title={content.boardRepair.heroTitle}
         description={content.boardRepair.heroDescription}
+        image="/images/engineer.webp"
       />
       {/* No Reveal wrapper here: this is a tall, filterable data table and
           must never be opacity-gated as a single block. */}

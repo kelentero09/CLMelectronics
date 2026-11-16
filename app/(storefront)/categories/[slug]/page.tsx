@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
 import { ProductCard } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { Reveal } from "@/components/storefront/reveal";
+import { CatalogHeader } from "@/components/storefront/catalog-header";
 
 // ISR: category pages are pre-rendered and cached for 5 minutes; admin
 // product edits revalidate them, so repeat visits skip the database.
@@ -61,25 +61,21 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
   if (!category) notFound();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Reveal>
-      <nav aria-label="Breadcrumb" className="text-xs text-slate-500">
-        <Link href="/products" className="hover:underline">Catalog</Link>
-        {" / "}
-        <Link href="/categories" className="hover:underline">Categories</Link>
-        {" / "}
-        <span aria-current="page" className="font-semibold text-navy-900">{category.name}</span>
-      </nav>
-      <h1 className="mt-2 text-2xl font-bold uppercase tracking-tight text-navy-900 sm:text-3xl">{category.name}</h1>
-      {category.description && <p className="mt-2 max-w-2xl text-sm text-slate-600">{category.description}</p>}
-      <p className="mt-1 text-xs text-slate-500">{products.length} product{products.length === 1 ? "" : "s"}</p>
-      </Reveal>
+    <>
+    <CatalogHeader
+      title={category.name}
+      description={category.description ?? undefined}
+      count={products.length}
+      crumbs={[{ label: "Categories", href: "/categories" }, { label: category.name }]}
+      action={{ href: `/products?category=${slug}`, label: "Search & filter this category" }}
+    />
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       {products.length === 0 ? (
-        <div className="mt-6">
+        <div>
           <EmptyState title="No products yet" text={`There are currently no published products in ${category.name}.`} />
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
           {products.map((p, i) => (
             <Reveal key={p.id} delay={Math.min(i * 40, 200)} className="[&>*]:h-full">
               <ProductCard product={p} morph />
@@ -88,5 +84,6 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
         </div>
       )}
     </div>
+    </>
   );
 }

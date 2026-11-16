@@ -8,6 +8,7 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { CategoryTabs } from "@/components/storefront/category-tabs";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { Reveal } from "@/components/storefront/reveal";
+import { CatalogHeader } from "@/components/storefront/catalog-header";
 import { Input } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/card";
@@ -125,22 +126,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (availability) base.availability = availability;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold uppercase tracking-tight text-navy-900 sm:text-3xl">
-          Products{" "}
-          {total > 0 && (
-            <span className="ml-2 rounded-full bg-navy-900/10 px-2.5 py-0.5 align-middle text-xs font-bold text-navy-900">
-              {total}
-            </span>
-          )}
-        </h1>
-        {q && (
-          <p className="text-sm text-slate-500">
-            Results for <span className="font-semibold text-navy-900">“{q}”</span>
-          </p>
-        )}
-      </div>
+    <>
+    <CatalogHeader
+      title={q ? `Results for “${q}”` : "Product Catalog"}
+      description="Equipment, spare parts, consumables and materials. Information and inquiry only: request details or availability for any item."
+      count={total}
+      crumbs={[{ label: "Products" }]}
+    />
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
 
       {/* Category tabs — single scrollable line with side arrows */}
       <CategoryTabs
@@ -163,7 +156,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
         {/* Sidebar filters (desktop) */}
-        <aside className="hidden self-start lg:sticky lg:top-[76px] lg:block">
+        <aside className="hidden self-start lg:sticky lg:top-24 lg:block" aria-label="Filters">
           <FilterPanel
             base={base}
             manufacturerParam={manufacturerParam}
@@ -252,7 +245,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               text="Try clearing filters or searching a different reference code, model, or part number."
             />
           ) : (
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
               {products.map((p, i) => (
                 <Reveal key={p.id} delay={Math.min(i * 40, 200)} className="[&>*]:h-full">
                   <ProductCard product={p} morph />
@@ -277,6 +270,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -294,31 +288,31 @@ function FilterPanel({
   availability: string;
 }) {
   return (
-    <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-navy-900">Manufacturer</p>
         <div className="mt-1 max-h-40 space-y-1 overflow-y-auto pr-1">
-          <Link href={buildLink(base, { manufacturer: undefined, page: undefined })} className={cn("block rounded px-2 py-1 text-sm", !manufacturerParam ? "bg-slate-100 font-semibold" : "hover:bg-slate-50")}>All</Link>
+          <Link href={buildLink(base, { manufacturer: undefined, page: undefined })} className={cn("block rounded-lg px-2.5 py-1.5 text-sm transition-colors", !manufacturerParam ? "bg-slate-100 font-semibold" : "hover:bg-slate-50")}>All</Link>
           {manufacturers.map((m) => (
-            <Link key={m} href={buildLink(base, { manufacturer: m, page: undefined })} className={cn("block truncate rounded px-2 py-1 text-sm", manufacturerParam === m ? "bg-navy-900 text-white" : "hover:bg-slate-50")}>{m}</Link>
+            <Link key={m} href={buildLink(base, { manufacturer: m, page: undefined })} className={cn("block truncate rounded-lg px-2.5 py-1.5 text-sm transition-colors", manufacturerParam === m ? "bg-navy-900 text-white" : "hover:bg-slate-50")}>{m}</Link>
           ))}
         </div>
       </div>
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-navy-900">Condition</p>
         <div className="mt-1 flex flex-wrap gap-1">
-          <Link href={buildLink(base, { condition: undefined, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", !condition ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
+          <Link href={buildLink(base, { condition: undefined, page: undefined })} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", !condition ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
           {CONDITIONS.map((c) => (
-            <Link key={c} href={buildLink(base, { condition: c, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", condition === c ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")} aria-current={condition === c ? "true" : undefined}>{CONDITION_LABELS[c] ?? c}</Link>
+            <Link key={c} href={buildLink(base, { condition: c, page: undefined })} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", condition === c ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")} aria-current={condition === c ? "true" : undefined}>{CONDITION_LABELS[c] ?? c}</Link>
           ))}
         </div>
       </div>
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-navy-900">Availability</p>
         <div className="mt-1 flex flex-wrap gap-1">
-          <Link href={buildLink(base, { availability: undefined, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", !availability ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
+          <Link href={buildLink(base, { availability: undefined, page: undefined })} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", !availability ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")}>Any</Link>
           {AVAILABILITIES.map((a) => (
-            <Link key={a} href={buildLink(base, { availability: a, page: undefined })} className={cn("rounded border px-2 py-1 text-xs", availability === a ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")} aria-current={availability === a ? "true" : undefined}>{AVAILABILITY_LABELS[a] ?? a}</Link>
+            <Link key={a} href={buildLink(base, { availability: a, page: undefined })} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", availability === a ? "border-navy-900 bg-navy-900 text-white" : "hover:bg-slate-50")} aria-current={availability === a ? "true" : undefined}>{AVAILABILITY_LABELS[a] ?? a}</Link>
           ))}
         </div>
       </div>

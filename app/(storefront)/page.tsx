@@ -21,84 +21,48 @@ import { getSiteContent } from "@/lib/site-content";
 import { productCardSelect, type ProductCardData } from "@/lib/catalog-queries";
 import { ProductCard } from "@/components/storefront/product-card";
 import { Reveal } from "@/components/storefront/reveal";
-import { ProfileSectionHeader } from "@/components/profile/profile-ui";
+import {
+  BrandStrip,
+  CheckList,
+  CtaBanner,
+  Eyebrow,
+  FeatureCard,
+  Section,
+  SectionHeader,
+  StatRow,
+  TextLink,
+} from "@/components/storefront/blocks";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ISR: HTML is cached and served instantly; admin content/product edits
 // revalidate this path, so updates appear immediately while repeat visits
-// skip the database entirely (speed win over per-request rendering).
+// skip the database entirely.
 export const revalidate = 300;
 
 export const metadata = {
   title: "CLM Electronics Engineering Services | Semiconductor & Manufacturing Solutions",
   description:
     "CLM Electronics Engineering Services provides technical support, equipment services, maintenance, repair, spare parts sourcing, and engineering solutions for semiconductor and manufacturing industries.",
+  alternates: { canonical: "/" },
 };
 
 const fallbackCapabilityCards = [
-  {
-    icon: Wrench,
-    title: "Technical Support",
-    text: "Technical assessment, minor and major repair, and responsive technical support.",
-  },
-  {
-    icon: CalendarCheck,
-    title: "Preventive & Predictive Maintenance",
-    text: "Scheduled maintenance programs and equipment support that sustain machine condition.",
-  },
-  {
-    icon: Cog,
-    title: "Equipment Support",
-    text: "Technical services for semiconductor manufacturing equipment and sub-assemblies.",
-  },
-  {
-    icon: Package,
-    title: "Parts & Components",
-    text: "Machine spare parts sourcing and installation according to customer requirements.",
-  },
-  {
-    icon: CircuitBoard,
-    title: "Board Repair",
-    text: "Repair support for various electronic and equipment control boards.",
-  },
-  {
-    icon: GraduationCap,
-    title: "Technical Training",
-    text: "Machine operation, setup, maintenance, calibration, and technical training.",
-  },
+  { title: "Technical Support", text: "Technical assessment, minor and major repair, and responsive technical support." },
+  { title: "Preventive & Predictive Maintenance", text: "Scheduled maintenance programs and equipment support that sustain machine condition." },
+  { title: "Equipment Support", text: "Technical services for semiconductor manufacturing equipment and sub-assemblies." },
+  { title: "Parts & Components", text: "Machine spare parts sourcing and installation according to customer requirements." },
+  { title: "Board Repair", text: "Repair support for various electronic and equipment control boards." },
+  { title: "Technical Training", text: "Machine operation, setup, maintenance, calibration, and technical training." },
 ];
 
-const fallbackBoardTypes = [
-  "Main boards",
-  "Driver boards",
-  "Power supplies",
-  "CPU boards",
-  "Logic boards",
-  "Servo / driver boards",
-];
+const fallbackBoardTypes = ["Main boards", "Driver boards", "Power supplies", "CPU boards", "Logic boards", "Servo / driver boards"];
 
 const fallbackWhyClm = [
-  {
-    icon: ShieldCheck,
-    title: "Quality Service",
-    text: "Focus on quality products, support, and services in every engagement.",
-  },
-  {
-    icon: Headphones,
-    title: "Reliable Technical Support",
-    text: "Responsive technical assistance and equipment support when it matters.",
-  },
-  {
-    icon: Award,
-    title: "After-Sales Support",
-    text: "Continued, accountable support after service and installation.",
-  },
-  {
-    icon: Factory,
-    title: "Industry-Focused Expertise",
-    text: "Experience focused on semiconductor and manufacturing equipment.",
-  },
+  { title: "Quality Service", text: "Focus on quality products, support, and services in every engagement." },
+  { title: "Reliable Technical Support", text: "Responsive technical assistance and equipment support when it matters." },
+  { title: "After-Sales Support", text: "Continued, accountable support after service and installation." },
+  { title: "Industry-Focused Expertise", text: "Experience focused on semiconductor and manufacturing equipment." },
 ];
 
 const fallbackProfilePoints = [
@@ -110,22 +74,29 @@ const fallbackProfilePoints = [
   "Accountable after-sales support",
 ];
 
+const capabilityIcons = [Wrench, CalendarCheck, Cog, Package, CircuitBoard, GraduationCap];
+const whyIcons = [ShieldCheck, Headphones, Award, Factory];
+
 export default async function CompanyProfileHomePage() {
   const content = await getSiteContent();
   const company = content.company;
 
-  const capabilityIcons = [Wrench, CalendarCheck, Cog, Package, CircuitBoard, GraduationCap];
-  const whyIcons = [ShieldCheck, Headphones, Award, Factory];
-  const capabilityCards = (content.home.capabilityCards.length > 0
-    ? content.home.capabilityCards
-    : fallbackCapabilityCards.map(({ title, text }) => ({ title, text }))
-  ).map((c, i) => ({ ...c, icon: capabilityIcons[i % capabilityIcons.length] }));
-  const whyClm = (content.home.whyCards.length > 0
-    ? content.home.whyCards
-    : fallbackWhyClm.map(({ title, text }) => ({ title, text }))
-  ).map((w, i) => ({ ...w, icon: whyIcons[i % whyIcons.length] }));
+  const capabilityCards = (content.home.capabilityCards.length > 0 ? content.home.capabilityCards : fallbackCapabilityCards).map(
+    (c, i) => ({ ...c, icon: capabilityIcons[i % capabilityIcons.length] })
+  );
+  const whyClm = (content.home.whyCards.length > 0 ? content.home.whyCards : fallbackWhyClm).map((w, i) => ({
+    ...w,
+    icon: whyIcons[i % whyIcons.length],
+  }));
   const profilePoints = content.home.profilePoints.length > 0 ? content.home.profilePoints : fallbackProfilePoints;
   const boardTypes = content.home.boardTypes.length > 0 ? content.home.boardTypes : fallbackBoardTypes;
+
+  const establishedYear = company.established.match(/\d{4}/)?.[0];
+  const stats = [
+    establishedYear && { value: establishedYear, label: "Established" },
+    content.equipment.groups.length > 0 && { value: String(content.equipment.groups.length), label: "Equipment lines" },
+    content.services.categories.length > 0 && { value: String(content.services.categories.length), label: "Service areas" },
+  ].filter((s): s is { value: string; label: string } => !!s);
 
   let featured: ProductCardData[] = [];
   try {
@@ -139,290 +110,281 @@ export default async function CompanyProfileHomePage() {
     console.error("Homepage featured products query failed", e);
   }
 
+  const primaryPhone = company.phones[0];
+
   return (
     <div className="overflow-x-clip">
-      {/* 1. HERO */}
-      <section className="blueprint-grid bg-navy-950" aria-label="CLM introduction">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_auto] lg:gap-14 lg:py-28">
-          <Reveal variant="left" className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent-400 sm:text-sm">
-              {content.home.heroBadge}
-            </p>
-            <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+      {/* 1. HERO: full-bleed lab photo faded into navy */}
+      <section className="relative isolate overflow-hidden bg-navy-950" aria-label="CLM introduction">
+        <Image
+          src="/images/hero-lab.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="-z-20 object-cover object-right opacity-70"
+        />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-950 via-navy-950/85 to-navy-950/20" />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-950 via-transparent to-navy-950/40" />
+        <div aria-hidden className="blueprint-grid absolute inset-0 -z-10 opacity-60 [mask-image:linear-gradient(to_right,black,transparent_70%)]" />
+
+        <div className="mx-auto max-w-7xl px-4 pb-14 pt-16 sm:px-6 sm:pb-20 sm:pt-24 lg:pb-24 lg:pt-32">
+          <div className="max-w-2xl animate-fade-up">
+            {content.home.heroBadge && (
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-accent-400 backdrop-blur sm:px-4 sm:text-xs sm:tracking-[0.18em]">
+                <span className="relative flex h-2 w-2" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-400 opacity-60 motion-reduce:animate-none" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-400" />
+                </span>
+                {content.home.heroBadge}
+              </p>
+            )}
+            <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
               {content.home.heroTitle}
             </h1>
-            <p className="mt-4 text-lg font-semibold text-slate-200 sm:text-2xl">
-              {content.home.heroSubtitle}
-            </p>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-              {company.description}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/services" className={cn(buttonVariants({ size: "lg" }), "bg-steel-500 hover:bg-steel-600")}>
-                Explore Our Services <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            {content.home.heroSubtitle && (
+              <p className="mt-5 text-balance text-lg font-semibold text-accent-400 sm:text-2xl">{content.home.heroSubtitle}</p>
+            )}
+            <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-slate-300 sm:text-lg">{company.description}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/services" className={cn(buttonVariants({ size: "lg", variant: "primary" }), "shadow-lg shadow-steel-500/25")}>
+                Explore Our Services <ArrowRight aria-hidden />
               </Link>
               <Link
-                href="/contact"
-                className={cn(buttonVariants({ size: "lg", variant: "outline" }), "border-white/40 bg-white/10 text-white hover:bg-white hover:text-navy-900")}
+                href="/products"
+                className={cn(buttonVariants({ size: "lg", variant: "outline" }), "border-white/25 bg-white/5 text-white backdrop-blur hover:bg-white hover:text-navy-900")}
               >
-                Contact CLM
+                Browse Products
               </Link>
             </div>
-          </Reveal>
-          <Reveal variant="right" delay={120} className="hidden lg:block lg:mx-0 lg:max-w-md">
-            <Image
-              src="/hero.jpg"
-              alt="Semiconductor engineer operating wire bonding equipment"
-              width={480}
-              height={480}
-              className="h-auto w-full rounded-xl border border-white/10 object-contain shadow-2xl"
-              priority
-            />
-          </Reveal>
-        </div>
-      </section>
+          </div>
 
-      {/* 2. PRODUCTS SUMMARY */}
-      <section className="border-y border-slate-200 bg-slate-50" aria-label="Products and technical solutions">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
-          <Reveal>
-          <ProfileSectionHeader
-            eyebrow="Products"
-            eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-            title="Products & Technical Solutions"
-            description={content.home.productsDescription}
-          />
-          </Reveal>
-          {featured.length > 0 ? (
-            <div className="mt-8 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
-              {featured.map((p, i) => (
-                <Reveal key={p.id} delay={Math.min(i * 80, 320)} className="[&>*]:h-full">
-                  <ProductCard product={p} morph />
-                </Reveal>
-              ))}
+          {stats.length > 0 && (
+            <div className="mt-14 max-w-xl animate-fade-up [animation-delay:150ms]">
+              <StatRow stats={stats} dark />
             </div>
-          ) : (
-            <Reveal className="mt-6">
-            <p className="rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-600">
-              Product highlights are currently unavailable. Browse the full catalog for equipment,
-              spare parts, consumables, and materials.
-            </p>
-            </Reveal>
           )}
-          <Reveal className="mt-8 text-center">
-            <Link href="/products" className={buttonVariants({ size: "lg" })}>
-              View Products <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
+        </div>
+      </section>
+
+      {/* 2. BRANDS */}
+      <section className="border-b border-slate-200/70 bg-white" aria-label="Equipment brands">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <Reveal>
+            <BrandStrip />
           </Reveal>
         </div>
       </section>
 
-      {/* 3. COMPANY PROFILE */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Company profile">
-        <Reveal>
-        <ProfileSectionHeader
-          eyebrow="Company Profile"
-          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-          title="Who CLM Is"
-          description={content.home.profileDescription}
-        />
-        </Reveal>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {profilePoints.map((point, i) => (
-            <Reveal key={point} delay={Math.min(i * 80, 320)} className="h-full">
-            <article className="flex h-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-              <span aria-hidden="true" className="shrink-0 text-3xl font-bold text-steel-600">✓</span>
-              <p className="text-sm leading-relaxed text-slate-600 font-medium">{point}</p>
-            </article>
-            </Reveal>
-          ))}
-        </div>
-        <Reveal className="mt-8 text-center">
-          <Link href="/about" className={buttonVariants({ size: "lg" })}>
-            Learn More About CLM <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </Reveal>
-      </section>
-
-      {/* 4. MISSION & VISION */}
-      <section className="border-y border-slate-200 bg-slate-50" aria-label="Mission and vision">
-        <div className="mx-auto grid max-w-7xl gap-5 px-4 py-10 sm:px-6 md:grid-cols-2">
-          <Reveal className="h-full">
-          <article className="h-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <p className="text-xl font-bold uppercase tracking-[0.15em] text-steel-600 sm:text-2xl">Mission</p>
-            <p className="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">
-              {company.mission}
-            </p>
-          </article>
-          </Reveal>
-          <Reveal delay={120} className="h-full">
-          <article className="h-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <p className="text-xl font-bold uppercase tracking-[0.15em] text-steel-600 sm:text-2xl">Vision</p>
-            <p className="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">
-              {company.vision}
-            </p>
-          </article>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* 5. WHAT CLM DOES */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="What CLM does">
-        <Reveal>
-        <ProfileSectionHeader
+      {/* 3. CAPABILITIES */}
+      <Section aria-label="What CLM does">
+        <SectionHeader
           eyebrow="Capabilities"
-          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
           title="What CLM Does"
           description={content.home.capabilitiesDescription}
+          action={{ href: "/services", label: "View all services" }}
         />
-        </Reveal>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {capabilityCards.map((c, i) => (
-            <Reveal key={c.title} delay={Math.min(i * 80, 400)} className="h-full">
-            <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-navy-900 text-white">
-                <c.icon className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <h3 className="mt-4 font-bold text-navy-900">{c.title}</h3>
-              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-slate-600">{c.text}</p>
-            </article>
+            <Reveal key={c.title} delay={i * 60} className="h-full">
+              <FeatureCard icon={c.icon} title={c.title} text={c.text} index={i} />
             </Reveal>
           ))}
         </div>
-        <Reveal className="mt-8 text-center">
-          <Link href="/services" className={buttonVariants({ size: "lg" })}>
-            View All Services <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </Reveal>
-      </section>
+      </Section>
 
-      {/* 6. EQUIPMENT EXPERTISE */}
-      <section className="blueprint-grid bg-navy-950" aria-label="Equipment expertise">
-        <Reveal className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent-400 sm:text-base">Equipment</p>
-          <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Semiconductor Equipment Expertise</h2>
-          <p className="mt-3 max-w-2xl leading-relaxed text-slate-300">
-            {content.home.equipmentDescription}
-          </p>
-          <ul className="mt-6 flex flex-wrap gap-2" aria-label="Equipment categories">
-            {content.equipment.groups.map((g) => (
-              <li
-                key={g.id}
-                className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white"
-              >
-                {g.brand}
-              </li>
+      {/* 4. FEATURED PRODUCTS */}
+      <Section tone="muted" aria-label="Products and technical solutions">
+        <SectionHeader
+          eyebrow="Products"
+          title="Products & Technical Solutions"
+          description={content.home.productsDescription}
+          action={{ href: "/products", label: "View all products" }}
+        />
+        {featured.length > 0 ? (
+          <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
+            {featured.map((p, i) => (
+              <Reveal key={p.id} delay={i * 60} className="[&>*]:h-full">
+                <ProductCard product={p} morph />
+              </Reveal>
             ))}
-          </ul>
-          <Link
-            href="/equipment"
-            className={cn(buttonVariants({ size: "lg" }), "mt-8 bg-steel-500 hover:bg-steel-600")}
-          >
-            Explore Equipment <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </Reveal>
-      </section>
-
-      {/* 7. BOARD REPAIR SUMMARY */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Board repair services">
-        <Reveal>
-        <ProfileSectionHeader
-          eyebrow="Board repair"
-          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-          title="Board Repair Services"
-          description={content.home.boardDescription}
-        />
-        </Reveal>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {boardTypes.map((b, i) => (
-            <Reveal key={b} delay={Math.min(i * 80, 320)} className="h-full">
-            <article className="flex h-full items-center gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-              <span aria-hidden="true" className="shrink-0 text-3xl font-bold text-steel-600">✓</span>
-              <p className="text-sm leading-relaxed text-slate-600 font-medium">{b}</p>
-            </article>
-            </Reveal>
-          ))}
-        </div>
-        <Reveal className="mt-8 text-center">
-          <Link href="/board-repair" className={buttonVariants({ size: "lg" })}>
-            View Board Repair Capabilities <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </Reveal>
-      </section>
-
-      {/* 8. WHY CLM */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Why CLM">
-        <Reveal>
-        <ProfileSectionHeader
-          eyebrow="Why CLM"
-          eyebrowClassName="text-sm font-bold uppercase tracking-[0.2em] text-steel-600 sm:text-base"
-          title="A Dependable Engineering Partner"
-          description={content.home.whyDescription}
-        />
-        </Reveal>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {whyClm.map((w, i) => (
-            <Reveal key={w.title} delay={Math.min(i * 80, 320)} className="h-full">
-            <article className="h-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-steel-500/10 text-steel-600">
-                <w.icon className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <h3 className="mt-4 font-bold text-navy-900">{w.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{w.text}</p>
-            </article>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* 9. CTA */}
-      <section className="blueprint-grid bg-navy-950" aria-label="Contact call to action">
-        <Reveal className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6 sm:py-16">
-          <h2 className="mx-auto max-w-2xl text-2xl font-bold text-white sm:text-3xl">
-            {content.home.ctaTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl leading-relaxed text-slate-300">
-            {content.home.ctaDescription}
+          </div>
+        ) : (
+          <p className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
+            Product highlights are currently unavailable. Browse the full catalog for equipment, spare parts, consumables, and materials.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "bg-steel-500 hover:bg-steel-600")}>
-              Contact CLM <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            <Link
-              href="/services"
-              className={cn(buttonVariants({ size: "lg", variant: "outline" }), "border-white/40 bg-white/10 text-white hover:bg-white hover:text-navy-900")}
-            >
-              Explore Our Services
-            </Link>
-          </div>
-        </Reveal>
-      </section>
+        )}
+      </Section>
 
-      {/* 10. CONTACT SUMMARY */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16" aria-label="Company contact information">
-        <Reveal className="grid gap-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="min-w-0">
-            <h2 className="text-xl font-bold text-navy-900 sm:text-2xl">{company.name}</h2>
-            <ul className="mt-4 space-y-2.5 text-sm text-slate-600">
-              <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
-                <span>{company.address}</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
-                <span>{company.phonesDisplay}</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0 text-steel-600" aria-hidden="true" />
-                <a href={`mailto:${company.email}`} className="break-all underline hover:text-navy-900">
-                  {company.email}
-                </a>
-              </li>
-            </ul>
+      {/* 5. COMPANY PROFILE: photo + story + mission/vision */}
+      <Section aria-label="Company profile">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <Reveal variant="left" className="relative">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl shadow-2xl shadow-navy-900/20 sm:aspect-[5/4] lg:aspect-[4/5]">
+              <Image
+                src="/images/team.webp"
+                alt="CLM engineer inspecting a wire bonder under a microscope"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-navy-950/60 via-transparent to-transparent" />
+            </div>
+            {establishedYear && (
+              <div className="absolute -bottom-6 left-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-xl sm:left-auto sm:right-6">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Serving industry since</p>
+                <p className="text-3xl font-bold tracking-tight text-navy-900">{establishedYear}</p>
+              </div>
+            )}
+          </Reveal>
+          <div>
+            <Reveal>
+              <Eyebrow>Company profile</Eyebrow>
+              <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight text-navy-900 sm:text-4xl">Who CLM Is</h2>
+              {content.home.profileDescription && (
+                <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">{content.home.profileDescription}</p>
+              )}
+            </Reveal>
+            <Reveal delay={80}>
+              <CheckList items={profilePoints} columns={2} className="mt-8" />
+            </Reveal>
+            <Reveal delay={120} className="mt-8 grid gap-4 sm:grid-cols-2">
+              {[
+                { label: "Mission", text: company.mission },
+                { label: "Vision", text: company.vision },
+              ]
+                .filter((m) => m.text)
+                .map((m) => (
+                  <article key={m.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-steel-600">{m.label}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-700">{m.text}</p>
+                  </article>
+                ))}
+            </Reveal>
+            <Reveal delay={160} className="mt-8">
+              <TextLink href="/about">Learn more about CLM</TextLink>
+            </Reveal>
           </div>
-          <Link href="/contact" className={cn(buttonVariants({ size: "lg" }), "w-full lg:w-auto")}>
-            Get in Touch <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+        </div>
+      </Section>
+
+      {/* 6. EQUIPMENT + BOARD REPAIR (dark) */}
+      <Section tone="dark" aria-label="Equipment expertise and board repair">
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <Reveal>
+            <Eyebrow dark>Equipment</Eyebrow>
+            <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Semiconductor Equipment Expertise
+            </h2>
+            {content.home.equipmentDescription && (
+              <p className="mt-4 text-pretty text-base leading-relaxed text-slate-300 sm:text-lg">{content.home.equipmentDescription}</p>
+            )}
+            <ul className="mt-8 grid gap-3 sm:grid-cols-2" aria-label="Equipment categories">
+              {content.equipment.groups.map((g) => (
+                <li
+                  key={g.id}
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 transition-colors hover:border-accent-400/40 hover:bg-white/[0.07]"
+                >
+                  <p className="text-sm font-bold text-white">{g.brand}</p>
+                  <p className="mt-0.5 text-xs text-slate-400">{g.label}</p>
+                </li>
+              ))}
+            </ul>
+            <TextLink href="/equipment" dark className="mt-8">
+              Explore equipment expertise
+            </TextLink>
+          </Reveal>
+
+          <Reveal delay={100} className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]">
+            <div className="relative aspect-[16/9]">
+              <Image
+                src="/images/board-service.webp"
+                alt="Technician repairing a control board at an electronics workbench"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/20 to-transparent" />
+            </div>
+            <div className="p-6 sm:p-8">
+              <Eyebrow dark>Board repair</Eyebrow>
+              <h3 className="mt-3 text-2xl font-bold tracking-tight text-white">Board Repair Services</h3>
+              {content.home.boardDescription && (
+                <p className="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">{content.home.boardDescription}</p>
+              )}
+              <ul className="mt-5 flex flex-wrap gap-2" aria-label="Board types">
+                {boardTypes.map((b) => (
+                  <li key={b} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <TextLink href="/board-repair" dark className="mt-6">
+                View board repair capability
+              </TextLink>
+            </div>
+          </Reveal>
+        </div>
+      </Section>
+
+      {/* 7. WHY CLM */}
+      <Section aria-label="Why CLM">
+        <SectionHeader eyebrow="Why CLM" title="A Dependable Engineering Partner" description={content.home.whyDescription} align="center" />
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {whyClm.map((w, i) => (
+            <Reveal key={w.title} delay={i * 60} className="h-full">
+              <FeatureCard icon={w.icon} title={w.title} text={w.text} tone="soft" />
+            </Reveal>
+          ))}
+        </div>
+      </Section>
+
+      {/* 8. CTA + CONTACT */}
+      <CtaBanner title={content.home.ctaTitle} description={content.home.ctaDescription}>
+        <Link href="/contact" className={cn(buttonVariants({ size: "lg", variant: "primary" }), "shadow-lg shadow-steel-500/25")}>
+          Contact CLM <ArrowRight aria-hidden />
+        </Link>
+        {primaryPhone && (
+          <a
+            href={`tel:${primaryPhone.replace(/[^\d+]/g, "")}`}
+            className={cn(buttonVariants({ size: "lg", variant: "outline" }), "border-white/25 bg-white/5 text-white hover:bg-white hover:text-navy-900")}
+          >
+            <Phone aria-hidden /> {primaryPhone}
+          </a>
+        )}
+      </CtaBanner>
+
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6" aria-label="Company contact information">
+        <Reveal className="grid gap-4 sm:grid-cols-3">
+          {[
+            { icon: MapPin, label: "Visit", value: company.address },
+            { icon: Phone, label: "Call", value: company.phonesDisplay, href: primaryPhone ? `tel:${primaryPhone.replace(/[^\d+]/g, "")}` : undefined },
+            { icon: Mail, label: "Email", value: company.email, href: `mailto:${company.email}` },
+          ]
+            .filter((c) => c.value)
+            .map((c) => {
+              const inner = (
+                <>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-steel-500/10 text-steel-600">
+                    <c.icon className="h-5 w-5" aria-hidden />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold uppercase tracking-wider text-slate-500">{c.label}</span>
+                    <span className="mt-0.5 block break-words text-sm font-medium text-navy-900">{c.value}</span>
+                  </span>
+                </>
+              );
+              const cls = "flex h-full items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-[border-color,box-shadow] duration-200";
+              return c.href ? (
+                <a key={c.label} href={c.href} className={cn(cls, "hover:border-steel-500/40 hover:shadow-md")}>
+                  {inner}
+                </a>
+              ) : (
+                <div key={c.label} className={cls}>
+                  {inner}
+                </div>
+              );
+            })}
         </Reveal>
       </section>
     </div>
