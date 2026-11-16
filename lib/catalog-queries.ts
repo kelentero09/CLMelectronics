@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
+import { dbErrorSummary } from "./site-content";
 
 /**
  * Lean select for product cards. Cards only show the primary image plus a
@@ -39,43 +40,48 @@ export interface CatalogFacets {
  * plus the distinct-manufacturer scan ran on EVERY products visit — now
  * cached for 5 minutes. Admin product/category edits bust the
  * `catalog-facets` tag via updateTag, so changes still appear immediately.
- * Falls back to empty lists if the DB is unreachable.
+ * Falls back to empty lists if the DB is unreachable — the fallback is
+ * applied outside the cache so an outage is never cached.
  */
-export const getCatalogFacets = unstable_cache(
+const getCachedCatalogFacets = unstable_cache(
   async (): Promise<CatalogFacets> => {
-    try {
-      const [cats, mfgs] = await Promise.all([
-        prisma.category.findMany({
-          where: { isActive: true },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-            _count: { select: { products: { where: { published: true, deletedAt: null } } } },
-          },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        }),
-        prisma.product.findMany({
-          where: { published: true, deletedAt: null, manufacturer: { not: null } },
-          select: { manufacturer: true },
-          distinct: ["manufacturer"],
-          orderBy: { manufacturer: "asc" },
-          take: 100,
-        }),
-      ]);
-      return {
-        categories: cats,
-        manufacturers: mfgs.map((m) => m.manufacturer).filter((m): m is string => !!m),
-      };
-    } catch (e) {
-      console.error("Catalog facets query failed, using empty fallback", e);
-      return { categories: [], manufacturers: [] };
-    }
+    const [cats, mfgs] = await Promise.all([
+      prisma.category.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          _count: { select: { products: { where: { published: true, deletedAt: null } } } },
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      prisma.product.findMany({
+        where: { published: true, deletedAt: null, manufacturer: { not: null } },
+        select: { manufacturer: true },
+        distinct: ["manufacturer"],
+        orderBy: { manufacturer: "asc" },
+        take: 100,
+      }),
+    ]);
+    return {
+      categories: cats,
+      manufacturers: mfgs.map((m) => m.manufacturer).filter((m): m is string => !!m),
+    };
   },
   ["catalog-facets"],
   { revalidate: 300, tags: ["catalog-facets"] }
 );
+
+export async function getCatalogFacets(): Promise<CatalogFacets> {
+  try {
+    return await getCachedCatalogFacets();
+  } catch (e) {
+    console.warn(`[catalog] Database unreachable, using empty facets: ${dbErrorSummary(e)}`);
+    return { categories: [], manufacturers: [] };
+  }
+}
 
 export type CatalogFilters = {
   q: string;

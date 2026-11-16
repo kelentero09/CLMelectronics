@@ -42,24 +42,35 @@ function defaultsMap(): ContentMap {
  * - Falls back to static defaults if the DB is unreachable, so pages
  *   never break and stay fast.
  */
-export const getSiteContentMap = unstable_cache(
+// The query throws on failure so a DB blip is never cached as "defaults" for an hour.
+const getCachedSiteContentMap = unstable_cache(
   async (): Promise<ContentMap> => {
-    try {
-      const rows = await prisma.siteContent.findMany({
-        select: { key: true, group: true, label: true, description: true, value: true, data: true, updatedAt: true },
-      });
-      if (rows.length === 0) return defaultsMap();
-      const base = defaultsMap();
-      for (const r of rows) base[r.key] = r as SiteContentRow;
-      return base;
-    } catch (e) {
-      console.error("Site content query failed, using static defaults", e);
-      return defaultsMap();
-    }
+    const rows = await prisma.siteContent.findMany({
+      select: { key: true, group: true, label: true, description: true, value: true, data: true, updatedAt: true },
+    });
+    const base = defaultsMap();
+    for (const r of rows) base[r.key] = r as SiteContentRow;
+    return base;
   },
   ["site-content-map"],
   { revalidate: 3600, tags: ["site-content"] }
 );
+
+export async function getSiteContentMap(): Promise<ContentMap> {
+  try {
+    return await getCachedSiteContentMap();
+  } catch (e) {
+    console.warn(`[site-content] Database unreachable, using static defaults: ${dbErrorSummary(e)}`);
+    return defaultsMap();
+  }
+}
+
+/** One-line description of a DB error (avoids dumping Prisma's multi-line invocation trace). */
+export function dbErrorSummary(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  const lines = msg.split("\n").map((l) => l.trim()).filter(Boolean);
+  return lines.find((l) => /can't reach|timed out|refused|error/i.test(l)) ?? lines.at(-1) ?? "unknown error";
+}
 
 export async function getContentValue(key: string): Promise<string> {
   const map = await getSiteContentMap();
