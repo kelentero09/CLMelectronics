@@ -49,7 +49,7 @@ export function isEmailConfigured(): boolean {
 }
 
 async function sendViaWorkers(cfg: SmtpConfig, opts: SendOpts): Promise<void> {
-  const { WorkerMailer } = await import("worker-mailer");
+  const { WorkerMailer } = await import("worker-mailer/dist/index.mjs");
   await WorkerMailer.send(
     {
       host: cfg.host,
