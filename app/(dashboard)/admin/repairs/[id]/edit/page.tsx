@@ -2,12 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RepairForm } from "@/components/dashboard/repair-form";
 import { boardRepairDelegate } from "@/lib/board-repairs";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Edit Repair Record" };
 
 export default async function EditRepairPage({ params }: { params: Promise<{ id: string }> }) {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   const { id } = await params;
   let repair = null;
   let stations: string[] = [];

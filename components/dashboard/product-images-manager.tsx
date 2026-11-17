@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/toaster";
 import { setPrimaryImage, deleteImage, moveImage } from "@/app/actions/products";
 import { confirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { isMediaUrl } from "@/lib/media";
 
 type ImageRow = { id: string; url: string; alt: string | null; isPrimary: boolean };
 
@@ -62,7 +63,7 @@ export function ProductImagesManager({ images }: { images: ImageRow[] }) {
             aria-busy={pending === img.id}
           >
             <div className="relative aspect-[4/3] w-full">
-              <Image src={img.url} alt={img.alt || "Product image"} fill sizes="(max-width: 640px) 50vw, 200px" className="rounded object-contain" />
+              <Image src={img.url} unoptimized={isMediaUrl(img.url)} alt={img.alt || "Product image"} fill sizes="(max-width: 640px) 50vw, 200px" className="rounded object-contain" />
             </div>
             <div className="mt-1 flex items-center justify-between gap-1">
               <button

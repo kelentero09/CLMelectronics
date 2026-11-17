@@ -1,17 +1,20 @@
 // CLM Catalog — Production Schema
-// PostgreSQL via Supabase (dedicated CLM Supabase project — NEVER shared
-// with any other business/project).
+// SQLite on Cloudflare D1 (accessed through @prisma/adapter-d1, see lib/db.ts).
+// Schema changes: `pnpm db:migration <name>` writes a SQL migration to /migrations.
 // NOTE: there is intentionally NO price / currency / monetary column
 // anywhere in this schema. This catalog is for information and inquiry only.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Rust-free client: a small TypeScript/WASM query compiler instead of the
+  // 2 MB query engine (needed to fit the Cloudflare Workers free plan).
+  engineType      = "client"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  // Only used by Prisma CLI tooling (migrate diff). At runtime the D1 adapter is used.
+  url      = "file:./dev.db"
 }
 
 enum UserRole {
@@ -40,13 +43,15 @@ enum InquiryStatus {
   COMPLETED
 }
 
-// Application-level authorization (Supabase Auth owns credentials;
-// this table stores only the role, linked by email).
-// inviteToken is for pure-Postgres invite flow (no Supabase email) — used by /auth/accept-invite
+// Admin users. Better Auth (lib/auth.ts) owns credentials (accounts.password)
+// and sessions; this table also stores the app role and the invite state.
+// inviteToken holds sha256(token) for the /auth/accept-invite flow.
 model User {
   id                    String    @id @default(cuid())
   email                 String    @unique
   name                  String?
+  emailVerified         Boolean   @default(false)
+  image                 String?
   role                  UserRole  @default(ADMIN)
   isActive              Boolean   @default(true)
   invitedAt             DateTime?
@@ -55,8 +60,61 @@ model User {
   inviteTokenExpiresAt  DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  sessions              Session[]
+  accounts              Account[]
 
   @@map("users")
+}
+
+// ---- Better Auth tables (https://www.better-auth.com/docs/concepts/database) ----
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  // Password hash: "pbkdf2-sha256$..." (lib/password.ts) or a legacy bcrypt
+  // hash imported from Supabase Auth (upgraded on the next sign-in).
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
 }
 
 model Category {
@@ -84,8 +142,8 @@ model Product {
   model            String?
   partNumber       String?
   manufacturer     String?
-  shortDescription String?             @db.VarChar(300)
-  description      String?             @db.Text
+  shortDescription String?
+  description      String?
   specifications   Json?
   datasheetUrl     String?
   condition        ProductCondition?
@@ -122,12 +180,12 @@ model Inquiry {
   id         String        @id @default(cuid())
   productId  String?
   product    Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productRef String?       @db.VarChar(50)
-  name       String        @db.VarChar(50)
-  email      String        @db.VarChar(255)
-  phone      String?       @db.VarChar(20)
-  company    String?       @db.VarChar(50)
-  message    String        @db.VarChar(500)
+  productRef String?
+  name       String
+  email      String
+  phone      String?
+  company    String?
+  message    String
   status     InquiryStatus @default(NEW)
   createdAt  DateTime      @default(now())
 
@@ -146,7 +204,7 @@ model SiteContent {
   group       String   @default("general")
   label       String
   description String?
-  value       String   @default("") @db.Text
+  value       String   @default("")
   data        Json?
   sortOrder   Int      @default(0)
   updatedAt   DateTime @updatedAt
@@ -158,7 +216,7 @@ model SiteContent {
 // Board repair capability records (managed in /admin/repairs, shown on
 // /board-repair). `key` is the stable seed key (e.g. "da-01"); new admin
 // entries get a generated key. Images are WebP — either local /public paths
-// or Supabase Storage public URLs (uploads convert to WebP server-side).
+// or /media/... URLs served from the R2 bucket (see app/media).
 model BoardRepair {
   id               String   @id @default(cuid())
   key              String   @unique
@@ -176,4 +234,17 @@ model BoardRepair {
   @@index([station])
   @@index([isActive])
   @@map("board_repairs")
+}
+
+// Uploaded images (product photos, board-repair photos), stored in D1 itself
+// and served by app/media/[...path]/route.ts at /media/<key>. Uploads are
+// resized to ~600px WebP first, so files are small (D1 max row size: 2 MB).
+model MediaFile {
+  key         String   @id
+  contentType String
+  size        Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@map("media_files")
 }

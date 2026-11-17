@@ -3,8 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { requestPasswordReset } from "@/app/actions/auth";
+import { requestPasswordReset, signIn } from "@/app/actions/auth";
 import { safeNext } from "@/lib/safe-redirect";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -45,22 +44,15 @@ function LoginForm() {
       const form = new FormData(e.currentTarget);
       const email = String(form.get("email") || "");
       const password = String(form.get("password") || "");
-      const supabase = createSupabaseBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError(
-          /invalid login credentials/i.test(signInError.message)
-            ? "Incorrect email or password."
-            : /email not confirmed/i.test(signInError.message)
-              ? "Please accept your invite email before signing in."
-              : "Sign-in failed. Please try again."
-        );
+      const res = await signIn(email, password);
+      if (!res.ok) {
+        setError(res.error);
       } else {
         router.replace(redirect);
         router.refresh();
       }
     } catch {
-      setError("Sign-in is unavailable — Supabase is not connected yet.");
+      setError("Sign-in is unavailable right now. Please try again.");
     } finally {
       setPending(false);
     }

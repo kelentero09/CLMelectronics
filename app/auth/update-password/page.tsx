@@ -1,10 +1,9 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { updatePassword } from "@/app/actions/auth";
+import { resetPassword } from "@/app/actions/auth";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,40 +21,10 @@ function UpdatePasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function checkSession() {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        // Handle hash fragment flow: #access_token=...&refresh_token=... from Supabase verify
-        if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
-          const params = new URLSearchParams(window.location.hash.substring(1));
-          const access_token = params.get("access_token");
-          const refresh_token = params.get("refresh_token") || "";
-          if (access_token) {
-            try {
-              await supabase.auth.setSession({ access_token, refresh_token });
-            } catch {}
-            // Clean hash from URL
-            window.history.replaceState(null, "", window.location.pathname + window.location.search);
-          }
-        }
-        const { data } = await supabase.auth.getSession();
-        if (!cancelled) setHasSession(!!data.session);
-      } catch {
-        if (!cancelled) setHasSession(false);
-      } finally {
-        if (!cancelled) setChecking(false);
-      }
-    }
-    checkSession();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Better Auth redirects here as ?token=... (valid link) or ?error=INVALID_TOKEN.
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") ?? "";
+  const hasToken = !!token && !searchParams.get("error");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,7 +43,7 @@ function UpdatePasswordForm() {
     }
     setPending(true);
     try {
-      const res = await updatePassword(pw);
+      const res = await resetPassword(token, pw);
       if (!res.ok) setError(res.error);
       else {
         setInfo(res.message ?? "Password updated. Redirecting…");
@@ -90,13 +59,7 @@ function UpdatePasswordForm() {
     }
   }
 
-  if (checking) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-14 text-center text-sm text-slate-500">Checking reset link…</div>
-    );
-  }
-
-  if (!hasSession) {
+  if (!hasToken) {
     return (
       <div className="mx-auto max-w-md px-4 py-14 sm:px-6">
         <Card>
@@ -122,7 +85,7 @@ function UpdatePasswordForm() {
       <Card>
         <CardContent>
           <h1 className="text-xl font-bold text-navy-900">Set new password</h1>
-          <p className="mt-1 text-sm text-slate-500">You’re signed in via the reset link. Choose a new password.</p>
+          <p className="mt-1 text-sm text-slate-500">Choose a new password for your admin account.</p>
           <form onSubmit={handleSubmit} className="mt-4 space-y-4" aria-label="Set new password">
             <div>
               <Label htmlFor="password">New password</Label>

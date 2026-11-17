@@ -3,10 +3,12 @@
 import { Fragment, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, FileDown, Link2, MessageSquare, Plus, X } from "lucide-react";
+import { ArrowRight, Check, Link2, MessageSquare, Plus, X } from "lucide-react";
 import { toast } from "@/components/ui/toaster";
 import { AVAILABILITY_LABELS, CONDITION_LABELS } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
+import { isMediaUrl } from "@/lib/media";
+import { SpecSheetIconButton } from "@/components/storefront/product-detail/download-spec-sheet";
 
 type Spec = { key: string; value: string };
 
@@ -313,7 +315,7 @@ function ProductHeader({ product: p, onRemove }: { product: ComparisonProduct; o
         aria-hidden="true"
       >
         {img?.url ? (
-          <Image src={img.url} alt="" fill sizes="220px" className="object-contain p-2" />
+          <Image src={img.url} unoptimized={isMediaUrl(img.url)} alt="" fill sizes="220px" className="object-contain p-2" />
         ) : (
           <span className="flex h-full items-center justify-center text-xl font-bold tracking-widest text-slate-300">CLM</span>
         )}
@@ -335,15 +337,11 @@ function ProductHeader({ product: p, onRemove }: { product: ComparisonProduct; o
         >
           <MessageSquare className="h-3.5 w-3.5" aria-hidden /> Inquire
         </Link>
-        <a
-          href={`/products/${p.slug}/spec-sheet`}
-          download
-          className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-slate-700 transition-colors hover:bg-slate-50 hover:text-navy-900"
-          aria-label={`Download ${p.name} spec sheet (PDF)`}
-          title="Download spec sheet (PDF)"
-        >
-          <FileDown className="h-4 w-4" aria-hidden />
-        </a>
+        <SpecSheetIconButton
+          slug={p.slug}
+          productName={p.name}
+          className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-slate-700 transition-colors hover:bg-slate-50 hover:text-navy-900 disabled:opacity-60"
+        />
         <Link
           href={`/products/${p.slug}`}
           className="hidden h-8 items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 text-slate-700 transition-colors hover:bg-slate-50 hover:text-navy-900 sm:inline-flex"

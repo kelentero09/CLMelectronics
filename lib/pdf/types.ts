@@ -3,11 +3,8 @@ export interface SpecItem {
   value: string;
 }
 
-/** Raster image already decoded to a format react-pdf can embed (PNG/JPEG; WebP is not supported). */
-export interface PdfImageData {
-  data: Buffer;
-  format: "png" | "jpg";
-}
+/** JPEG/PNG data URL (react-pdf can not embed WebP, so images are converted in the browser first). */
+export type PdfImageData = string;
 
 export interface SpecSheetCompany {
   name: string;
@@ -28,9 +25,9 @@ export interface SpecSheetData {
   shortDescription?: string | null;
   description?: string | null;
   specifications: SpecItem[];
-  /** Primary product photo, pre-converted to PNG/JPEG. */
+  /** Primary product photo as a JPEG data URL. */
   image?: PdfImageData | null;
-  /** Company logo, pre-converted to PNG/JPEG. */
+  /** Company logo as a JPEG data URL. */
   logo?: PdfImageData | null;
   datasheetUrl?: string | null;
   /** Date the product record was last updated. */
@@ -68,3 +65,9 @@ export const BRAND_COLORS = {
 
 export const PDF_PAGE_MARGIN = 40;
 export const PDF_CONTENT_WIDTH = 595.28 - PDF_PAGE_MARGIN * 2;
+
+/** JSON returned by GET /products/:slug/spec-sheet. Images are same-origin URLs the browser converts to JPEG. */
+export type SpecSheetPayload = Omit<SpecSheetData, "image" | "logo"> & {
+  imageUrl: string | null;
+  logoUrl: string;
+};

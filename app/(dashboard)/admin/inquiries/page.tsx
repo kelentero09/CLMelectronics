@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { InquiriesManager, type InquiryRow } from "@/components/dashboard/inquiries-manager";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,8 @@ export default async function AdminInquiriesPage({
 }: {
   searchParams: Promise<{ status?: string; page?: string }>;
 }) {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   const sp = await searchParams;
   const status = sp.status && ["NEW", "CONTACTED", "COMPLETED"].includes(sp.status) ? sp.status : "";
   const page = Math.max(1, Number(sp.page || 1) || 1);

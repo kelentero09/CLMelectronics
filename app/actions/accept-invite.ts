@@ -1,18 +1,18 @@
 "use server";
 
+import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
-import { createSupabaseServiceClient, findAuthUserByEmail } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
+import { hashPassword } from "@/lib/password";
 import { findUserByInviteToken } from "@/lib/invites";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
-export type AcceptInviteResult = { ok: true } | { ok: false; error: string };
+export type AcceptInviteResult = { ok: true; signedIn: boolean } | { ok: false; error: string };
 
-function passwordError(message: string): string {
-  return /weak|pwned|leaked/i.test(message)
-    ? "That password is too weak or has appeared in a data breach. Choose another."
-    : "Could not set password. Please try again.";
-}
-
+/**
+ * Completes an admin invite: stores the chosen password as the user's
+ * credential account, clears the one-time token and signs the user in.
+ */
 export async function acceptInvite(token: string, password: string): Promise<AcceptInviteResult> {
   const t = String(token || "").trim();
   const pw = String(password || "");
@@ -32,39 +32,34 @@ export async function acceptInvite(token: string, password: string): Promise<Acc
       return { ok: false, error: "Invite expired. Ask an admin to resend it." };
     }
 
-    const supabase = createSupabaseServiceClient();
-    const existing = await findAuthUserByEmail(user.email);
-
+    const passwordHash = await hashPassword(pw);
+    const existing = await prisma.account.findFirst({
+      where: { userId: user.id, providerId: "credential" },
+      select: { id: true },
+    });
     if (existing) {
-      const { error } = await supabase.auth.admin.updateUserById(existing.id, {
-        password: pw,
-        email_confirm: true,
-        user_metadata: user.name ? { name: user.name } : undefined,
-      });
-      if (error) {
-        console.error("[acceptInvite] update", error.message);
-        return { ok: false, error: passwordError(error.message) };
-      }
+      await prisma.account.update({ where: { id: existing.id }, data: { password: passwordHash } });
     } else {
-      const { error } = await supabase.auth.admin.createUser({
-        email: user.email,
-        password: pw,
-        email_confirm: true,
-        user_metadata: user.name ? { name: user.name } : undefined,
+      await prisma.account.create({
+        data: { userId: user.id, accountId: user.id, providerId: "credential", password: passwordHash },
       });
-      if (error) {
-        console.error("[acceptInvite] create", error.message);
-        return { ok: false, error: passwordError(error.message) };
-      }
     }
 
-    // Clear token so the link is one-time, and mark as accepted.
+    // One-time link: clear the token, mark accepted, and drop any older sessions.
     await prisma.user.update({
       where: { id: user.id },
-      data: { inviteToken: null, inviteTokenExpiresAt: null, inviteAccepted: true },
+      data: { inviteToken: null, inviteTokenExpiresAt: null, inviteAccepted: true, emailVerified: true },
     });
+    await prisma.session.deleteMany({ where: { userId: user.id } });
 
-    return { ok: true };
+    let signedIn = false;
+    try {
+      await getAuth().api.signInEmail({ body: { email: user.email, password: pw }, headers: await headers() });
+      signedIn = true;
+    } catch (e) {
+      console.warn("[acceptInvite] auto sign-in failed", e instanceof Error ? e.message : e);
+    }
+    return { ok: true, signedIn };
   } catch (e) {
     console.error("[acceptInvite]", e);
     return { ok: false, error: "Could not set password. Please try again." };

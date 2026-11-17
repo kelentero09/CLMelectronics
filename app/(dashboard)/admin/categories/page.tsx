@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/db";
 import { CategoryManager, type CategoryRow } from "@/components/dashboard/category-manager";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Categories" };
 
 export default async function AdminCategoriesPage() {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   let categories: CategoryRow[] = [];
   try {
     categories = await prisma.category.findMany({

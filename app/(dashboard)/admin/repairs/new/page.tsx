@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { RepairForm } from "@/components/dashboard/repair-form";
 import { boardRepairDelegate } from "@/lib/board-repairs";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Add Repair Record" };
 
 export default async function NewRepairPage() {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   let stations: string[] = [];
   try {
     const delegate = boardRepairDelegate();

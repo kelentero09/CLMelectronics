@@ -6,6 +6,7 @@ import { Input, Select } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge, DataTable, Pagination } from "@/components/ui/card";
 import { PublishToggle, DeleteRestoreButtons } from "@/components/dashboard/product-row-actions";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ type AdminProductRow = Prisma.ProductGetPayload<{
 type SP = { q?: string; category?: string; availability?: string; published?: string; trashed?: string; page?: string };
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<SP> }) {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const showTrashed = sp.trashed === "1";
@@ -28,11 +31,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   if (sp.published === "no") where.published = false;
   if (q) {
     where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { referenceCode: { contains: q, mode: "insensitive" } },
-      { model: { contains: q, mode: "insensitive" } },
-      { partNumber: { contains: q, mode: "insensitive" } },
-      { manufacturer: { contains: q, mode: "insensitive" } },
+      { name: { contains: q } },
+      { referenceCode: { contains: q } },
+      { model: { contains: q } },
+      { partNumber: { contains: q } },
+      { manufacturer: { contains: q } },
     ];
   }
 

@@ -6,28 +6,16 @@ import { requireAdmin } from "@/lib/authz";
 import { unstable_rethrow } from "next/navigation";
 import { generateToken, hashToken } from "@/lib/tokens";
 import { getSiteUrl } from "@/lib/site-url";
-import { createSupabaseServiceClient, findAuthUserByEmail } from "@/lib/auth";
 import { inviteUserSchema, firstIssueMessage } from "@/lib/validators";
 import { sendMail, buildInviteHtml, isEmailConfigured } from "@/lib/email";
 
 export type UserActionResult = { ok: true; message?: string; inviteLink?: string } | { ok: false; error: string };
 
-function isEmailRateLimitMessage(msg: string): boolean {
-  return /rate limit|too many requests|over_email|email.*limit|429/i.test(msg);
-}
-
-function rateLimitMessage(): string {
-  return "Supabase Auth rate limit hit (generating link). Wait a minute and try again — or use Node mailer (SMTP_HOST set) to bypass Supabase email limits.";
-}
-
 function fail(error: unknown): UserActionResult {
   unstable_rethrow(error);
   console.error("[users action]", error);
   const msg = error instanceof Error ? error.message : String(error);
-  if (isEmailRateLimitMessage(msg)) return { ok: false, error: rateLimitMessage() };
-  if (error instanceof Error && error.message && !/prisma|database|connect|supabase/i.test(error.message)) {
-    return { ok: false, error: error.message };
-  }
+  if (msg && !/prisma|database|connect|d1_|sqlite/i.test(msg)) return { ok: false, error: msg };
   return { ok: false, error: "Something went wrong. Please try again." };
 }
 
@@ -50,7 +38,7 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
     }
 
     const siteUrl = getSiteUrl();
-    // Pure Postgres token — no Supabase generateLink, no Supabase email, no rate limit
+    // One-time invite token; only its sha256 is stored.
     const token = generateToken();
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -65,13 +53,13 @@ export async function inviteUser(formData: FormData): Promise<UserActionResult> 
     const html = buildInviteHtml(inviteLink, email, siteUrl);
     const sent = await sendMail({ to: email, subject: "You’ve been invited to CLM Admin — set your password", html });
 
-    console.log(`[users] ${currentUser.email} invited ${email} via Postgres token (configured=${isEmailConfigured()})`);
+    console.log(`[users] ${currentUser.email} invited ${email} (email configured=${isEmailConfigured()})`);
     revalidatePath("/admin/users");
     if (!sent.ok && !isEmailConfigured()) {
-      return { ok: true, message: "Invite link generated (email not configured — copy link below). Set SMTP_* in .env to auto-send.", inviteLink };
+      return { ok: true, message: "Invite link generated (email not configured — copy link below). Set the SMTP_* settings to send it automatically.", inviteLink };
     }
     if (!sent.ok) return { ok: false, error: sent.error };
-    return { ok: true, message: "Invite sent via Node mailer" };
+    return { ok: true, message: "Invite sent by email." };
   } catch (e) {
     return fail(e);
   }
@@ -99,7 +87,7 @@ export async function resendInvite(emailRaw: string): Promise<UserActionResult> 
     revalidatePath("/admin/users");
     if (!sent.ok && !isEmailConfigured()) return { ok: true, message: "Invite link generated (email not configured — copy below).", inviteLink };
     if (!sent.ok) return { ok: false, error: sent.error };
-    return { ok: true, message: "Invite resent via Node mailer" };
+    return { ok: true, message: "Invite resent by email." };
   } catch (e) {
     return fail(e);
   }
@@ -118,6 +106,8 @@ export async function toggleUserActive(userId: string, isActive: boolean): Promi
       if (activeCount <= 1) return { ok: false, error: "Cannot disable the last active admin." };
     }
     await prisma.user.update({ where: { id: userId }, data: { isActive } });
+    // Disabling signs the user out everywhere.
+    if (!isActive) await prisma.session.deleteMany({ where: { userId } });
     revalidatePath("/admin/users");
     return { ok: true, message: isActive ? "User enabled." : "User disabled." };
   } catch (e) {
@@ -138,17 +128,8 @@ export async function removeUser(userId: string): Promise<UserActionResult> {
       return { ok: false, error: "Cannot remove the last active admin." };
     }
 
-    // Soft-disable + remove Prisma row only if never activated? We hard delete Prisma row
-    // but also try to delete Supabase Auth user (best effort).
+    // Sessions and the credential account are removed by ON DELETE CASCADE.
     await prisma.user.delete({ where: { id: userId } });
-
-    try {
-      const supabase = createSupabaseServiceClient();
-      const authUser = await findAuthUserByEmail(target.email);
-      if (authUser) await supabase.auth.admin.deleteUser(authUser.id);
-    } catch (e) {
-      console.warn("[users] Supabase Auth delete failed (DB row already deleted)", e);
-    }
 
     revalidatePath("/admin/users");
     return { ok: true, message: "User removed." };

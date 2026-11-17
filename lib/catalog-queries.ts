@@ -108,11 +108,11 @@ export const getCatalogPage = unstable_cache(
     if (f.q) {
       // Short, indexed columns only; `description` (unindexed Text) is excluded on purpose.
       where.OR = [
-        { name: { contains: f.q, mode: "insensitive" } },
-        { referenceCode: { contains: f.q, mode: "insensitive" } },
-        { model: { contains: f.q, mode: "insensitive" } },
-        { partNumber: { contains: f.q, mode: "insensitive" } },
-        { manufacturer: { contains: f.q, mode: "insensitive" } },
+        { name: { contains: f.q } },
+        { referenceCode: { contains: f.q } },
+        { model: { contains: f.q } },
+        { partNumber: { contains: f.q } },
+        { manufacturer: { contains: f.q } },
       ];
     }
     const [products, total] = await Promise.all([

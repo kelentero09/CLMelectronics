@@ -11,7 +11,7 @@ export type ActionResult = { ok: true; id?: string } | { ok: false; error: strin
 
 function fail(error: unknown): ActionResult {
   console.error("[board-repairs action]", error);
-  if (error instanceof Error && error.message && !/prisma|database|connect|supabase/i.test(error.message)) {
+  if (error instanceof Error && error.message && !/prisma|database|connect|d1_|sqlite/i.test(error.message)) {
     return { ok: false, error: error.message };
   }
   return { ok: false, error: "Something went wrong. Please try again." };

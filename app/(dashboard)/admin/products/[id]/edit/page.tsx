@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ProductForm } from "@/components/dashboard/product-form";
 import { ProductImagesManager } from "@/components/dashboard/product-images-manager";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ export const metadata = { title: "Edit Product" };
 type EditableProduct = Prisma.ProductGetPayload<{ include: { images: true } }>;
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   const { id } = await params;
   let product: EditableProduct | null = null;
   let categories: { id: string; name: string }[] = [];

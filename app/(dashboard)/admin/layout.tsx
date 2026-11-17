@@ -15,8 +15,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="mx-auto max-w-xl px-4 py-16 text-center">
           <h1 className="text-xl font-bold text-navy-900">Admin unavailable</h1>
           <p className="mt-2 text-sm text-slate-600">
-            The database is not connected yet. Follow SUPABASE_SETUP.md to connect Supabase,
-            run migrations and seed, then sign in again.
+            The database is not reachable. Check the D1 binding and migrations (see CLOUDFLARE_SETUP.md),
+            then sign in again.
           </p>
         </div>
       );

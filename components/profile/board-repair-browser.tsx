@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { BoardRepairRecord } from "@/data/board-repair";
+import { isMediaUrl } from "@/lib/media";
 
 function PhotoCell({ board, image }: { board: string; image: string | null }) {
   const [enlarged, setEnlarged] = useState(false);
@@ -29,7 +30,7 @@ function PhotoCell({ board, image }: { board: string; image: string | null }) {
         className="block overflow-hidden rounded border border-slate-200"
         aria-label={`Enlarge photo of ${board}`}
       >
-        <Image src={src} alt={`${board} board`} width={80} height={56} sizes="80px" className="h-14 w-20 bg-white object-contain" />
+        <Image src={src} unoptimized={isMediaUrl(src)} alt={`${board} board`} width={80} height={56} sizes="80px" className="h-14 w-20 bg-white object-contain" />
       </button>
       {enlarged && (
         <div
@@ -40,7 +41,7 @@ function PhotoCell({ board, image }: { board: string; image: string | null }) {
           onClick={() => setEnlarged(false)}
         >
           <div className="relative h-[85vh] w-full max-w-4xl animate-fade-up">
-            <Image src={src} alt={`${board} board, enlarged`} fill sizes="(max-width: 896px) 100vw, 896px" className="rounded bg-white object-contain p-2" />
+            <Image src={src} unoptimized={isMediaUrl(src)} alt={`${board} board, enlarged`} fill sizes="(max-width: 896px) 100vw, 896px" className="rounded bg-white object-contain p-2" />
           </div>
           <button type="button" autoFocus className="absolute right-4 top-4 rounded bg-white px-3 py-1.5 text-sm font-semibold shadow" onClick={() => setEnlarged(false)} aria-label="Close photo">
             Close ✕

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { ProductImagePlaceholder } from "@/components/storefront/product-card";
 import { cn } from "@/lib/utils";
+import { isMediaUrl } from "@/lib/media";
 
 export function ProductGallery({
   productId,
@@ -49,7 +50,7 @@ export function ProductGallery({
           >
             <Image
               key={current.url}
-              src={current.url}
+              src={current.url} unoptimized={isMediaUrl(current.url)}
               alt={current.alt || productName}
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
@@ -83,7 +84,7 @@ export function ProductGallery({
                 i === active ? "border-steel-500 ring-2 ring-steel-500/30" : "border-slate-200 hover:border-slate-400"
               )}
             >
-              <Image src={img.url} alt="" fill sizes="120px" className="object-contain" />
+              <Image src={img.url} unoptimized={isMediaUrl(img.url)} alt="" fill sizes="120px" className="object-contain" />
             </button>
           ))}
         </div>
@@ -160,7 +161,7 @@ function Lightbox({
       <div className="relative h-full w-full" onClick={(e) => e.target === e.currentTarget && dialogRef.current?.close()}>
         <Image
           key={img.url}
-          src={img.url}
+          src={img.url} unoptimized={isMediaUrl(img.url)}
           alt={img.alt || productName}
           fill
           sizes="94vw"

@@ -4,8 +4,9 @@ allowBuilds:
   core-js: true
   esbuild: true
   prisma: true
-  sharp: false
+  sharp: true
   unrs-resolver: false
+  workerd: true
 
 overrides:
   enhanced-resolve: ^5.26.0

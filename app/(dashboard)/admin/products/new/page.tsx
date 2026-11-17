@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/db";
 import { ProductForm } from "@/components/dashboard/product-form";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Add Product" };
 
 export default async function NewProductPage() {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   let categories: { id: string; name: string }[] = [];
   try {
     categories = await prisma.category.findMany({

@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/db";
 import { SiteContentManager, type ContentRow } from "@/components/dashboard/site-content-manager";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Website Content" };
 
 export default async function AdminContentPage() {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   let rows: ContentRow[] = [];
   try {
     const data = await prisma.siteContent.findMany({

@@ -5,6 +5,8 @@ import { Input, Select } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge, DataTable, Pagination } from "@/components/ui/card";
 import { RepairDeleteButton } from "@/components/dashboard/repair-delete-button";
+import { isMediaUrl } from "@/lib/media";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,8 @@ const REPAIRS_PAGE_SIZE = 25;
 type SP = { q?: string; station?: string; page?: string };
 
 export default async function AdminRepairsPage({ searchParams }: { searchParams: Promise<SP> }) {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const stationFilter = sp.station ?? "";
@@ -23,10 +27,10 @@ export default async function AdminRepairsPage({ searchParams }: { searchParams:
   if (stationFilter) where.station = stationFilter;
   if (q) {
     where.OR = [
-      { boardDescription: { contains: q, mode: "insensitive" } },
-      { model: { contains: q, mode: "insensitive" } },
-      { problem: { contains: q, mode: "insensitive" } },
-      { station: { contains: q, mode: "insensitive" } },
+      { boardDescription: { contains: q } },
+      { model: { contains: q } },
+      { problem: { contains: q } },
+      { station: { contains: q } },
     ];
   }
 
@@ -97,7 +101,7 @@ export default async function AdminRepairsPage({ searchParams }: { searchParams:
                 <td className="px-3 py-2">
                   {r.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <Image src={encodeURI(r.image)} alt={r.boardDescription} width={56} height={40} sizes="56px" className="h-10 w-14 rounded border border-slate-200 bg-white object-contain" />
+                    <Image src={encodeURI(r.image)} unoptimized={isMediaUrl(encodeURI(r.image))} alt={r.boardDescription} width={56} height={40} sizes="56px" className="h-10 w-14 rounded border border-slate-200 bg-white object-contain" />
                   ) : (
                     <span className="text-xs text-slate-400">No photo</span>
                   )}

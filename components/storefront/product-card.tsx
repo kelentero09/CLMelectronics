@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AVAILABILITY_LABELS, CONDITION_LABELS } from "@/lib/catalog";
 import { CompareCheckbox } from "./compare-checkbox";
+import { isMediaUrl } from "@/lib/media";
 
 export type CardProduct = {
   id: string;
@@ -51,7 +52,7 @@ export function ProductCard({ product, morph = false }: { product: CardProduct; 
 
   const image = primary ? (
     <Image
-      src={primary}
+      src={primary} unoptimized={isMediaUrl(primary)}
       alt={product.images[0]?.alt || product.name}
       fill
       sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 400px"

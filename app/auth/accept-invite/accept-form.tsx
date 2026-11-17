@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { acceptInvite } from "@/app/actions/accept-invite";
 import { Input, Label, FieldError } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -30,17 +29,12 @@ export default function AcceptInviteForm({ token, email, name }: { token: string
     }
     setPending(true);
     try {
-      // Create/update Supabase Auth user + clear Postgres token in one server action
+      // Saves the password, clears the one-time token and signs in (sets the session cookie).
       const res = await acceptInvite(token, password);
       if (!res.ok) {
         setError(res.error);
       } else {
-        // Also sign in client-side so session is set immediately without re-login
-        try {
-          const supabase = createSupabaseBrowserClient();
-          await supabase.auth.signInWithPassword({ email, password });
-        } catch {}
-        router.push("/login?invite=accepted");
+        router.push(res.signedIn ? "/admin" : "/login?invite=accepted");
         router.refresh();
       }
     } catch {
@@ -62,7 +56,7 @@ export default function AcceptInviteForm({ token, email, name }: { token: string
             Invited as <strong>{email}</strong>
             {name ? ` (${name})` : ""}. Choose a password — you’ll sign in at <span className="font-mono text-xs">/login</span> afterwards.
           </p>
-          <p className="mt-1 text-xs text-slate-500">No Supabase email link — this page is pure Postgres + Node mailer. Token expires in 24h.</p>
+          <p className="mt-1 text-xs text-slate-500">This invite link can be used once and expires 24 hours after it was sent.</p>
           <form onSubmit={handleSubmit} className="mt-4 space-y-4" aria-label="Set password">
             <div>
               <Label htmlFor="password">New password</Label>

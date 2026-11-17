@@ -3,7 +3,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
-import { createSupabaseServiceClient } from "@/lib/auth";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export type StorageStats = {
   database: {
@@ -42,16 +42,6 @@ export async function getStorageStats(): Promise<{ ok: true; data: StorageStats 
   try {
     await requireAdmin();
 
-    // Get database table sizes
-    const tableStats = await prisma.$queryRaw<Array<{ tablename: string; size: string }>>`
-      SELECT 
-        tablename,
-        pg_size_pretty(pg_total_relation_size('public.' || tablename)) as size
-      FROM pg_tables 
-      WHERE schemaname = 'public'
-      ORDER BY pg_total_relation_size('public.' || tablename) DESC
-    `;
-
     // Get row counts for key tables
     const [inquiryCounts, productCounts, imageCounts] = await Promise.all([
       prisma.inquiry.groupBy({ by: ["status"], _count: true }),
@@ -77,50 +67,37 @@ export async function getStorageStats(): Promise<{ ok: true; data: StorageStats 
       where: { createdAt: { lt: ninetyDaysAgo } }
     });
 
-    // Calculate total database size
-    const totalDbSize = await prisma.$queryRaw<Array<{ size: string }>>`
-      SELECT pg_size_pretty(pg_database_size(current_database())) as size
-    `;
-
-    // Get storage bucket stats
-    let storageStats = { bucket: "product-images", totalSize: "Unknown", totalSizeBytes: 0, fileCount: 0 };
+    // D1 reports the database file size in the metadata of any query result.
+    let dbSizeBytes = 0;
     try {
-      const supabase = createSupabaseServiceClient();
-      const { data: bucketData, error } = await supabase.storage.from("product-images").list("clm", { limit: 1000 });
-      
-      if (!error && bucketData) {
-        const totalSize = bucketData.reduce((sum, file) => sum + (file.metadata?.size || 0), 0);
-        storageStats = {
-          bucket: "product-images",
-          totalSize: formatBytes(totalSize),
-          totalSizeBytes: totalSize,
-          fileCount: bucketData.length
-        };
-      }
+      const { env } = await getCloudflareContext({ async: true });
+      const res = await env.DB.prepare("SELECT 1").run();
+      dbSizeBytes = Number(res.meta?.size_after ?? 0);
+    } catch (e) {
+      console.warn("[storage stats] D1 size unavailable", e instanceof Error ? e.message : e);
+    }
+
+    // Uploaded images (stored in D1, table media_files).
+    let storageStats = { bucket: "media_files (D1)", totalSize: "Unknown", totalSizeBytes: 0, fileCount: 0 };
+    try {
+      const agg = await prisma.mediaFile.aggregate({ _sum: { size: true }, _count: true });
+      const totalSize = agg._sum.size ?? 0;
+      storageStats = { ...storageStats, totalSize: formatBytes(totalSize), totalSizeBytes: totalSize, fileCount: agg._count };
     } catch (e) {
       unstable_rethrow(e);
       console.error("Storage stats failed", e);
     }
 
-    // Format table data
+    // D1 doesn't expose per-table sizes; row counts are shown instead.
     const tables = [
-      { name: "inquiries", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[0] },
-      { name: "products", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[1] },
-      { name: "product_images", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[2] },
-      { name: "categories", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[3] },
-      { name: "board_repairs", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[4] },
-      { name: "site_contents", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[5] },
-      { name: "users", size: "Unknown", sizeBytes: 0, rowCount: tableRowCounts[6] },
+      { name: "inquiries", size: "—", sizeBytes: 0, rowCount: tableRowCounts[0] },
+      { name: "products", size: "—", sizeBytes: 0, rowCount: tableRowCounts[1] },
+      { name: "product_images", size: "—", sizeBytes: 0, rowCount: tableRowCounts[2] },
+      { name: "categories", size: "—", sizeBytes: 0, rowCount: tableRowCounts[3] },
+      { name: "board_repairs", size: "—", sizeBytes: 0, rowCount: tableRowCounts[4] },
+      { name: "site_contents", size: "—", sizeBytes: 0, rowCount: tableRowCounts[5] },
+      { name: "users", size: "—", sizeBytes: 0, rowCount: tableRowCounts[6] },
     ];
-
-    // Map actual table sizes
-    tableStats.forEach((stat) => {
-      const table = tables.find(t => t.name === stat.tablename);
-      if (table) {
-        table.size = stat.size;
-        table.sizeBytes = parseSize(stat.size);
-      }
-    });
 
     // Process inquiry counts
     const inquiryStats = {
@@ -146,8 +123,8 @@ export async function getStorageStats(): Promise<{ ok: true; data: StorageStats 
       ok: true,
       data: {
         database: {
-          totalSize: totalDbSize[0]?.size || "Unknown",
-          totalSizeBytes: parseSize(totalDbSize[0]?.size || "0 MB"),
+          totalSize: dbSizeBytes ? formatBytes(dbSizeBytes) : "Unknown",
+          totalSizeBytes: dbSizeBytes,
           tables
         },
         storage: storageStats,
@@ -159,19 +136,6 @@ export async function getStorageStats(): Promise<{ ok: true; data: StorageStats 
     unstable_rethrow(e);
     console.error("[storage stats]", e);
     return { ok: false, error: "Failed to get storage statistics" };
-  }
-}
-
-function parseSize(sizeStr: string): number {
-  const match = sizeStr.match(/(\d+(?:\.\d+)?)\s*(KB|MB|GB)/i);
-  if (!match) return 0;
-  const value = parseFloat(match[1]);
-  const unit = match[2].toUpperCase();
-  switch (unit) {
-    case "KB": return value * 1024;
-    case "MB": return value * 1024 * 1024;
-    case "GB": return value * 1024 * 1024 * 1024;
-    default: return 0;
   }
 }
 

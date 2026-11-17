@@ -1,17 +1,18 @@
 /**
  * Seed: 5 fixed categories (idempotent upsert) + ADMIN user + clearly-marked
- * SAMPLE products for development. Run AFTER `prisma migrate deploy` with
- * Supabase env configured: `pnpm seed`.
+ * SAMPLE products for development. Run AFTER the D1 migrations:
+ *   pnpm seed --local     (local D1 in .wrangler/state)
+ *   pnpm seed             (remote D1; needs `wrangler login`)
+ * Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD to create a sign-in for the admin.
  * Replace or remove ALL SAMPLE products with CLM-approved content before launch.
  */
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+import { connectD1 } from "../scripts/d1.mjs";
+import { hashPassword } from "../lib/password";
 import { FIXED_CATEGORIES } from "../lib/catalog";
 import { slugify } from "../lib/utils";
 import { boardRepairRecords } from "../data/board-repair";
 import { SITE_CONTENT_DEFAULTS } from "../data/site-content-defaults";
-
-const prisma = new PrismaClient();
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@clm.local";
 
@@ -79,6 +80,18 @@ const SAMPLE_PRODUCTS = [
 ];
 
 async function main() {
+  const { prisma, target, dispose } = await connectD1();
+  console.log(`Seeding ${target}…`);
+  try {
+    await seed(prisma);
+  } finally {
+    await dispose();
+  }
+}
+
+type Db = Awaited<ReturnType<typeof connectD1>>["prisma"];
+
+async function seed(prisma: Db) {
   for (const c of FIXED_CATEGORIES) {
     await prisma.category.upsert({
       where: { slug: c.slug },
@@ -88,12 +101,21 @@ async function main() {
   }
   console.log("Categories seeded (5 fixed).");
 
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
     update: { role: "ADMIN" },
-    create: { email: ADMIN_EMAIL, name: "CLM Admin", role: "ADMIN" },
+    create: { email: ADMIN_EMAIL, name: "CLM Admin", role: "ADMIN", emailVerified: true, inviteAccepted: true },
   });
-  console.log(`Admin user ready: ${ADMIN_EMAIL} (create the matching Supabase Auth account separately).`);
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (adminPassword && adminPassword.length >= 8) {
+    const password = await hashPassword(adminPassword);
+    const account = await prisma.account.findFirst({ where: { userId: admin.id, providerId: "credential" } });
+    if (account) await prisma.account.update({ where: { id: account.id }, data: { password } });
+    else await prisma.account.create({ data: { userId: admin.id, accountId: admin.id, providerId: "credential", password } });
+    console.log(`Admin user ready: ${ADMIN_EMAIL} (password set from SEED_ADMIN_PASSWORD).`);
+  } else {
+    console.log(`Admin user ready: ${ADMIN_EMAIL} (no password — set SEED_ADMIN_PASSWORD, min 8 chars, to enable sign-in).`);
+  }
 
   const existingSamples = await prisma.product.count({ where: { referenceCode: { startsWith: "SAMPLE-" } } });
   if (existingSamples === 0) {
@@ -179,9 +201,7 @@ async function main() {
   console.log(`Site contents seeded (${siteContentCount} new keys, ${SITE_CONTENT_DEFAULTS.length} total).`);
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

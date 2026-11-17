@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StorageManager } from "@/components/dashboard/storage-manager";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Storage Dashboard" };
 
 export default async function StorageDashboardPage() {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   const result = await getStorageStats();
 
   if (!result.ok) {

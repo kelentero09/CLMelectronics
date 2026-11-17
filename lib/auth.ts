@@ -1,97 +1,91 @@
 /**
- * Supabase clients for the CLM catalog (dedicated CLM Supabase project).
- * Supabase Auth owns credentials; Prisma User stores the application role.
+ * Authentication (Better Auth on Cloudflare D1).
+ * - Credentials live in `accounts.password` (lib/password.ts), sessions in `sessions`.
+ * - Public sign-up is disabled: admins are invited (app/actions/users.ts).
+ * - Authorization (ADMIN role, isActive) is enforced in lib/authz.ts.
  */
 import { cache } from "react";
-import { createServerClient } from "@supabase/ssr";
-import { createClient as createSupabaseClient, type User } from "@supabase/supabase-js";
+import { headers } from "next/headers";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
+import { prisma } from "@/lib/db";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { getSiteUrl } from "@/lib/site-url";
+import { buildRecoveryHtml, isEmailConfigured, sendMail } from "@/lib/email";
 
-function getSupabaseConfig() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+function createAuth() {
+  const secret = process.env.BETTER_AUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("BETTER_AUTH_SECRET is not set.");
   }
-  return { supabaseUrl, supabaseAnonKey };
-}
+  const siteUrl = getSiteUrl();
 
-export async function createSupabaseServerClient() {
-  const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
-  const { cookies } = await import("next/headers");
-  const cookieStore = await cookies();
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        } catch {
-          // Called from a Server Component — cookies are read-only there.
-          // The proxy refreshes the session, so this is safe to ignore.
+  return betterAuth({
+    appName: "CLM Catalog Admin",
+    baseURL: siteUrl,
+    basePath: "/api/auth",
+    secret: secret || "dev-only-insecure-secret-change-me-0123456789",
+    // `prisma` resolves the current request's D1 client lazily (lib/db.ts).
+    // D1 has no interactive transactions.
+    database: prismaAdapter(prisma, { provider: "sqlite", transaction: false }),
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      minPasswordLength: 8,
+      maxPasswordLength: 128,
+      password: { hash: hashPassword, verify: verifyPassword },
+      resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
+      async sendResetPassword({ user, url }) {
+        if (!isEmailConfigured() && process.env.NODE_ENV !== "production") {
+          console.info(`[auth] SMTP not configured. Dev password-reset link for ${user.email}:\n${url}`);
         }
+        const sent = await sendMail({
+          to: user.email,
+          subject: "Reset your CLM Admin password",
+          html: buildRecoveryHtml(url, user.email, siteUrl),
+        });
+        if (!sent.ok) console.error("[auth] reset email not sent:", sent.error);
       },
     },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // refresh expiry once a day
+    },
+    // Our own server actions add per-IP/per-email limits (lib/rate-limit.ts).
+    rateLimit: { enabled: true, window: 60, max: 30 },
+    advanced: {
+      useSecureCookies: siteUrl.startsWith("https://"),
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"] },
+    },
+    trustedOrigins: [siteUrl],
+    // Lets server actions set the session cookie.
+    plugins: [nextCookies()],
   });
 }
 
-export async function getSupabaseSession() {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getSession();
-    if (error) return null;
-    return data.session;
-  } catch {
-    return null;
-  }
+type Auth = ReturnType<typeof createAuth>;
+let instance: Auth | null = null;
+
+/** Lazily created so a missing env var fails the request, not the build. */
+export function getAuth(): Auth {
+  instance ??= createAuth();
+  return instance;
 }
 
+export type AuthUser = { id: string; email: string; name?: string | null };
+
 /**
- * Verified Supabase user for the current request. Wrapped in React `cache()`
- * so layout + page + components share ONE network round-trip per request.
+ * Signed-in user for the current request, or null.
+ * Wrapped in React `cache()` so layout + page + components share one lookup.
  */
-export const getSupabaseUser = cache(async (): Promise<User | null> => {
+export const getAuthUser = cache(async (): Promise<AuthUser | null> => {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser();
-    if (error) return null;
-    return data.user;
+    const session = await getAuth().api.getSession({ headers: await headers() });
+    if (!session?.user?.email) return null;
+    return { id: session.user.id, email: session.user.email, name: session.user.name };
   } catch {
     return null;
   }
 });
-
-/** Service-role client — server-only, bypasses RLS. Never expose to the browser. */
-export function createSupabaseServiceClient() {
-  const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url || !serviceKey) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY");
-  }
-  return createSupabaseClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-/**
- * Finds a Supabase Auth user by email, paging through ALL users
- * (listUsers() alone only returns the first page of 50).
- */
-export async function findAuthUserByEmail(email: string): Promise<User | null> {
-  const supabase = createSupabaseServiceClient();
-  const target = email.toLowerCase();
-  const perPage = 1000;
-  for (let page = 1; page <= 50; page++) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-    if (error) throw error;
-    const found = data.users.find((u) => u.email?.toLowerCase() === target);
-    if (found) return found;
-    if (data.users.length < perPage) return null;
-  }
-  return null;
-}

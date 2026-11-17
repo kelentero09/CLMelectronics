@@ -7,38 +7,36 @@
  */
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { getSupabaseUser } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 /** App user for the current request — deduplicated per request via cache(). */
-const findAppUser = cache(async (email: string) => {
-  return prisma.user.findUnique({ where: { email } });
+const findAppUser = cache(async (id: string) => {
+  return prisma.user.findUnique({ where: { id } });
 });
 
 export async function getCurrentAppUser() {
-  const supaUser = await getSupabaseUser();
-  if (!supaUser?.email) return null;
+  const authUser = await getAuthUser();
+  if (!authUser) return null;
   try {
-    return await findAppUser(supaUser.email);
+    return await findAppUser(authUser.id);
   } catch {
     return null;
   }
 }
 
 export async function requireAdmin() {
-  const supaUser = await getSupabaseUser();
-  if (!supaUser?.email) redirect("/login?redirect=/admin");
+  const authUser = await getAuthUser();
+  if (!authUser) redirect("/login?redirect=/admin");
   let appUser = null;
   try {
-    appUser = await findAppUser(supaUser.email);
+    appUser = await findAppUser(authUser.id);
   } catch {
-    throw new Error(
-      "DATABASE_UNAVAILABLE: cannot verify admin role. Connect Supabase (see SUPABASE_SETUP.md)."
-    );
+    throw new Error("DATABASE_UNAVAILABLE: cannot verify admin role. Check the D1 binding (see CLOUDFLARE_SETUP.md).");
   }
   if (!appUser || appUser.role !== "ADMIN") redirect("/login?error=forbidden");
   if (appUser.isActive === false) redirect("/login?error=disabled");
-  return { supaUser, appUser };
+  return { authUser, appUser };
 }
 
 export async function isAdmin(): Promise<boolean> {

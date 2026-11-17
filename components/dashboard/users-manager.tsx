@@ -183,7 +183,7 @@ export function UsersManager({
                   Copy
                 </Button>
               </div>
-              <p className="mt-1 text-[11px] text-amber-800">Set SMTP_HOST/SMTP_USER/SMTP_PASS in .env to auto-send via Node mailer. Current: Supabase mailer bypassed.</p>
+              <p className="mt-1 text-[11px] text-amber-800">Set the SMTP_HOST / SMTP_USER / SMTP_PASS settings to send invites automatically.</p>
             </div>
           )}
         </CardContent>

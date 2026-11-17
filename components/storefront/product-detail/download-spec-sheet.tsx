@@ -1,8 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Loader2 } from "lucide-react";
+import { FileDown, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { downloadSpecSheet, SpecSheetError } from "@/lib/pdf/download";
+
+const FALLBACK_ERROR = "Failed to generate spec sheet. Please try again.";
+
+function useSpecSheetDownload(slug: string) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      await downloadSpecSheet(slug);
+    } catch (err) {
+      setError(err instanceof SpecSheetError ? err.message : FALLBACK_ERROR);
+      if (!(err instanceof SpecSheetError)) console.error("[spec-sheet]", err);
+    } finally {
+      setPending(false);
+    }
+  }
+  return { pending, error, run };
+}
 
 export function DownloadSpecSheet({
   slug,
@@ -13,37 +37,13 @@ export function DownloadSpecSheet({
   productName: string;
   className?: string;
 }) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleDownload() {
-    setPending(true);
-    setError(null);
-    try {
-      const res = await fetch(`/products/${encodeURIComponent(slug)}/spec-sheet`);
-      if (res.status === 429) throw new Error("Too many downloads. Please wait a minute and try again.");
-      if (!res.ok) throw new Error("Failed to generate spec sheet. Please try again.");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${slug}-spec-sheet.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate spec sheet. Please try again.");
-    } finally {
-      setPending(false);
-    }
-  }
+  const { pending, error, run } = useSpecSheetDownload(slug);
 
   return (
     <div className={className}>
       <Button
         type="button"
-        onClick={handleDownload}
+        onClick={run}
         disabled={pending}
         variant="outline"
         className="gap-2"
@@ -63,5 +63,36 @@ export function DownloadSpecSheet({
         </p>
       )}
     </div>
+  );
+}
+
+/** Compact icon button (comparison table). Errors are shown as a toast. */
+export function SpecSheetIconButton({ slug, productName, className = "" }: { slug: string; productName: string; className?: string }) {
+  const [pending, setPending] = useState(false);
+
+  async function handleClick() {
+    if (pending) return;
+    setPending(true);
+    try {
+      await downloadSpecSheet(slug);
+    } catch (err) {
+      toast.error(err instanceof SpecSheetError ? err.message : FALLBACK_ERROR);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={pending}
+      aria-busy={pending}
+      className={className}
+      aria-label={`Download ${productName} spec sheet (PDF)`}
+      title="Download spec sheet (PDF)"
+    >
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileDown className="h-4 w-4" aria-hidden />}
+    </button>
   );
 }

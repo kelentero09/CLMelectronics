@@ -1,0 +1,57 @@
+/**
+ * Cloudflare Workers config for the CLM catalog (Next.js via OpenNext).
+ * Setup steps: CLOUDFLARE_SETUP.md
+ *
+ * Only free Cloudflare products are used:
+ * - D1 database `clm` — all app data, logins, and uploaded images (media_files).
+ * - Images binding — resizes uploads (free tier: 5,000 transformations/month;
+ *   the app falls back to storing the browser-resized image if it's unavailable).
+ *
+ * "remote": true makes `next dev` and `next build` (prerendering) use the real
+ * D1 database. Run `pnpm dev:local` to work against a local copy instead.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clm-catalog",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+
+  "vars": {
+    // Public URL of the site, used for email links and auth. Update for your domain.
+    "NEXT_PUBLIC_SITE_URL": "https://clm-catalog.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev"
+  },
+
+  // Next.js image optimization (and upload resizing in lib/storage.ts).
+  "images": { "binding": "IMAGES" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "clm",
+      "database_id": "9307c9e7-d49c-4385-b33f-40e3811d492e",
+      "migrations_dir": "migrations",
+      "remote": true
+    }
+  ],
+
+  "env": {
+    /**
+     * Local-only bindings for offline development and testing:
+     *   pnpm dev:local      (NEXT_DEV_WRANGLER_ENV=local next dev)
+     * Data lives in .wrangler/state. Load it with `pnpm db:migrate:local`.
+     */
+    "local": {
+      "vars": { "NEXT_PUBLIC_SITE_URL": "http://localhost:3000" },
+      "images": { "binding": "IMAGES" },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "clm", "database_id": "local-clm-catalog", "migrations_dir": "migrations" }
+      ]
+    }
+  }
+}

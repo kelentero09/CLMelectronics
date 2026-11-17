@@ -356,7 +356,7 @@ function SpecSheetDocument({ data }: { data: SpecSheetData }) {
   );
 }
 
-export async function generateSpecSheetPdf(data: SpecSheetData): Promise<Uint8Array> {
-  const blob = await pdf(<SpecSheetDocument data={data} />).toBlob();
-  return new Uint8Array(await blob.arrayBuffer());
+/** Renders the spec sheet in the browser (react-pdf’s layout engine can't run on Cloudflare Workers). */
+export async function generateSpecSheetPdf(data: SpecSheetData): Promise<Blob> {
+  return pdf(<SpecSheetDocument data={data} />).toBlob();
 }

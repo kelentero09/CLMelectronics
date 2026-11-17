@@ -69,9 +69,9 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
       <div className="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
         <p className="font-semibold text-slate-700">How invites work</p>
         <ol className="mt-1 list-decimal space-y-1 pl-5">
-          <li>Enter email → Invite → Supabase sends a one-time link (check Email Templates → Invite user → Redirect To: <code className="rounded bg-white px-1 py-0.5">/auth/callback</code>).</li>
+          <li>Enter email → Invite → a one-time link (valid 24 hours) is emailed, or shown to copy if email isn’t configured.</li>
           <li>Invitee clicks email → sets password on first visit → then logs in at <code className="rounded bg-white px-1 py-0.5">/login</code>.</li>
-          <li>Disable = block login but keep record. Remove = delete Prisma row + try to delete Supabase Auth user.</li>
+          <li>Disable = block login (signs them out) but keep the record. Remove = delete the user, their password and sessions.</li>
           <li>You cannot disable/remove yourself or the last active admin.</li>
         </ol>
       </div>

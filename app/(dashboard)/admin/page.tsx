@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
+import { requireAdmin } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Admin Dashboard" };
 
 export default async function AdminHomePage() {
+  // Every admin page checks auth itself: shared layouts are not re-run on client navigation.
+  await requireAdmin();
   let stats = { products: 0, published: 0, categories: 0, inquiriesNew: 0, repairs: 0, content: 0, users: 0 };
   let recent: { id: string; name: string; referenceCode: string; updatedAt: Date }[] = [];
   try {

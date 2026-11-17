@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Package, FolderTree, Inbox, LogOut, Plus, Wrench, FileText, HelpCircle, Users, HardDrive } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { signOut as signOutAction } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -26,8 +26,7 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
 
   async function signOut() {
     try {
-      const supabase = createSupabaseBrowserClient();
-      await supabase.auth.signOut();
+      await signOutAction();
     } catch {
       /* not connected — just leave */
     }
