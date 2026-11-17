@@ -48,7 +48,17 @@ export function isEmailConfigured(): boolean {
   return !!getSmtpConfig();
 }
 
+/** "CLM Electronics <a@b.com>" → { name, email }; a bare address → { email }. */
+function parseAddress(value: string): { name?: string; email: string } {
+  const m = value.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
+  if (!m) return { email: value.trim() };
+  const name = m[1]!.trim();
+  return name ? { name, email: m[2]!.trim() } : { email: m[2]!.trim() };
+}
+
 async function sendViaWorkers(cfg: SmtpConfig, opts: SendOpts): Promise<void> {
+  // The ESM build imports cloudflare:sockets statically; the CommonJS build's
+  // require() of it fails inside the bundled Worker.
   const { WorkerMailer } = await import("worker-mailer/dist/index.mjs");
   await WorkerMailer.send(
     {
@@ -61,7 +71,7 @@ async function sendViaWorkers(cfg: SmtpConfig, opts: SendOpts): Promise<void> {
       socketTimeoutMs: 15_000,
       responseTimeoutMs: 15_000,
     },
-    { from: cfg.from, to: opts.to, subject: opts.subject, html: opts.html, text: opts.text }
+    { from: parseAddress(cfg.from), to: opts.to, subject: opts.subject, html: opts.html, text: opts.text }
   );
 }
 
