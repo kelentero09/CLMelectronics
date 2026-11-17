@@ -129,7 +129,7 @@ export async function DashboardOverview() {
   const stationRows = d.repairsByStation
     .map((g) => ({ station: g.station || "Unspecified", count: g._count._all, rate: g._avg.repairRate ?? 0 }))
     .sort((a, b) => b.count - a.count);
-  const TOP_STATIONS = 8;
+  const TOP_STATIONS = 5;
   const top = stationRows.slice(0, TOP_STATIONS);
   const rest = stationRows.slice(TOP_STATIONS);
   const byStation: Datum[] = top.map((r) => ({
@@ -260,8 +260,8 @@ export async function DashboardOverview() {
         </Panel>
       </div>
 
-      {/* Repairs + activity */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* Repairs + activity: cards keep their own height so short lists leave no empty block */}
+      <div className="grid items-start gap-4 lg:grid-cols-3">
         <Panel title="Board repairs by station" subtitle={`${repairs} active boards`} href="/admin/repairs">
           <BarList data={byStation} caption="Board repairs by station" valueLabel="boards" emptyText="No board repairs yet." />
         </Panel>

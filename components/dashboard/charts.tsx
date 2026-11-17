@@ -32,8 +32,10 @@ function niceTicks(max: number, count = 4): number[] {
 }
 
 function SrTable({ caption, data, valueLabel }: { caption: string; data: Datum[]; valueLabel: string }) {
+  // Tables ignore a 1px height, so the wrapper (not the table) is visually hidden.
   return (
-    <table className="sr-only">
+    <div className="sr-only">
+    <table>
       <caption>{caption}</caption>
       <thead>
         <tr>
@@ -50,6 +52,7 @@ function SrTable({ caption, data, valueLabel }: { caption: string; data: Datum[]
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

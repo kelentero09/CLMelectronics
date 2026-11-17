@@ -34,9 +34,11 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
     router.refresh();
   }
 
+  // Desktop: the shell fills the window; only <main> scrolls, the sidebar stays put.
+  // Phones: the page scrolls normally (the menu is in the header there).
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <aside className="hidden w-60 shrink-0 flex-col bg-navy-950 text-slate-200 md:flex" aria-label="Admin navigation">
+    <div className="flex min-h-dvh flex-1 bg-slate-100 md:h-dvh md:min-h-0 md:flex-none md:overflow-hidden">
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto bg-navy-950 text-slate-200 md:flex" aria-label="Admin navigation">
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
           <Image
             src="/logo3.jpg"
@@ -79,8 +81,8 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
           </Link>
         </div>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-bold text-navy-900 md:hidden">
             <Image
               src="/logo3.jpg"
@@ -108,7 +110,7 @@ export function AdminShell({ children, adminEmail }: { children: React.ReactNode
           </button>
           <p className="hidden text-xs text-slate-500 md:block">Signed in as {adminEmail}</p>
         </header>
-        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        <main id="main-content" className="relative min-w-0 flex-1 p-4 sm:p-6 md:overflow-y-auto">{children}</main>
       </div>
     </div>
   );
