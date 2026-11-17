@@ -58,7 +58,7 @@ The build reads the real D1 data, so be logged in (`pnpm wrangler login`).
 > only allows with **Developer Mode** on (Settings → System → For developers →
 > Developer Mode), otherwise it fails with `EPERM: operation not permitted, symlink`.
 > Alternatives: run the build from WSL, or let Cloudflare build it — Workers →
-> clm-catalog → Settings → Builds → connect the Git repo, build command
+> clmelectronics → Settings → Builds → connect the Git repo, build command
 > `pnpm exec opennextjs-cloudflare build`, deploy command `pnpm exec opennextjs-cloudflare deploy`.
 > `pnpm dev` works on Windows either way.
 
@@ -73,7 +73,7 @@ The build reads the real D1 data, so be logged in (`pnpm wrangler login`).
 ## 4. After it works
 
 - Remove the Supabase values from `.env` and delete the Supabase project when you're ready.
-- Optional: add a custom domain (Workers → clm-catalog → Settings → Domains), then
+- Optional: add a custom domain (Workers → clmelectronics → Settings → Domains), then
   update `NEXT_PUBLIC_SITE_URL` and redeploy.
 
 ---

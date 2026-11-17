@@ -12,7 +12,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "clm-catalog",
+  "name": "clmelectronics",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -24,7 +24,7 @@
 
   "vars": {
     // Public URL of the site, used for email links and auth. Update for your domain.
-    "NEXT_PUBLIC_SITE_URL": "https://clm-catalog.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev"
+    "NEXT_PUBLIC_SITE_URL": "https://clmelectronics.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev"
   },
 
   // Next.js image optimization (and upload resizing in lib/storage.ts).
