@@ -8,5 +8,18 @@ allowBuilds:
   unrs-resolver: false
   workerd: true
 
+# Same list for pnpm 10 (Cloudflare's build image may not use pnpm 11).
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - core-js
+  - esbuild
+  - prisma
+  - sharp
+  - workerd
+
+# Warn instead of failing the build when a dependency's install script is skipped.
+strictDepBuilds: false
+
 overrides:
   enhanced-resolve: ^5.26.0
