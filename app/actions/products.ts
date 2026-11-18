@@ -62,6 +62,7 @@ function revalidateCatalog(slug?: string) {
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/categories");
+  revalidatePath("/brands");
   if (slug) revalidatePath(`/products/${slug}`);
   revalidatePath("/admin/products");
 }

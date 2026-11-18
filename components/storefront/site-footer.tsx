@@ -14,6 +14,7 @@ const companyLinks = [
 const catalogLinks = [
   { label: "All Products", href: "/products" },
   { label: "Categories", href: "/categories" },
+  { label: "Brands", href: "/brands" },
   { label: "Spare Parts", href: "/categories/spare-parts" },
   { label: "Equipment", href: "/categories/equipment" },
   { label: "Compare Products", href: "/compare" },

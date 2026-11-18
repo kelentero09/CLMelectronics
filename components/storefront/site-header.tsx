@@ -4,18 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, GitCompareArrows, Menu, X } from "lucide-react";
+import { BadgeCheck, ChevronRight, GitCompareArrows, Menu, X } from "lucide-react";
 import { compareHref, COMPARE_MAX, useCompareIds } from "@/lib/compare-store";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { label: "Home", href: "/" },
   { label: "About", href: "/about" },
   { label: "Services", href: "/services" },
   { label: "Equipment", href: "/equipment" },
   { label: "Board Repair", href: "/board-repair" },
   { label: "Products", href: "/products" },
   { label: "Categories", href: "/categories" },
+  { label: "Brands", href: "/brands" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -37,7 +37,7 @@ function CountBadge({ count, className }: { count: number; className?: string })
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ authorizedBrands = [] }: { authorizedBrands?: string[] }) {
   const pathname = usePathname();
   const compareIds = useCompareIds();
   const compareCount = compareIds.length;
@@ -80,7 +80,7 @@ export function SiteHeader() {
       style={{ viewTransitionName: "site-header" }}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label="CLM home">
+        <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3" aria-label={authorizedBrands.length > 0 ? `CLM home. Authorized Dealer of ${authorizedBrands.join(" & ")}` : "CLM home"}>
           <Image
             src="/logo3.jpg"
             alt=""
@@ -94,6 +94,12 @@ export function SiteHeader() {
             <span className="block truncate text-[10px] font-medium tracking-[0.16em] text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
               ENGINEERING SERVICES
             </span>
+            {authorizedBrands.length > 0 && (
+              <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-amber-300 sm:text-[11px]">
+                <BadgeCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate">Authorized Dealer of {authorizedBrands.join(" & ")}</span>
+              </span>
+            )}
           </span>
         </Link>
 

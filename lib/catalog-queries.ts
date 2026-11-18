@@ -83,6 +83,34 @@ export async function getCatalogFacets(): Promise<CatalogFacets> {
   }
 }
 
+/**
+ * Published product count per manufacturer, used by /brands. Same 5-minute
+ * cache and `catalog-facets` tag as the other facets. Empty if the DB is down.
+ */
+const getCachedManufacturerCounts = unstable_cache(
+  async (): Promise<Record<string, number>> => {
+    const rows = await prisma.product.groupBy({
+      by: ["manufacturer"],
+      where: { published: true, deletedAt: null, manufacturer: { not: null } },
+      _count: { _all: true },
+    });
+    const counts: Record<string, number> = {};
+    for (const r of rows) if (r.manufacturer) counts[r.manufacturer] = r._count._all;
+    return counts;
+  },
+  ["manufacturer-counts"],
+  { revalidate: 300, tags: ["catalog-facets"] }
+);
+
+export async function getManufacturerCounts(): Promise<Record<string, number>> {
+  try {
+    return await getCachedManufacturerCounts();
+  } catch (e) {
+    console.warn(`[catalog] Database unreachable, using empty manufacturer counts: ${dbErrorSummary(e)}`);
+    return {};
+  }
+}
+
 export type CatalogFilters = {
   q: string;
   categoryId: string | null;

@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Award,
+  BadgeCheck,
   CalendarCheck,
   CircuitBoard,
   Cog,
@@ -29,7 +30,6 @@ import {
   FeatureCard,
   Section,
   SectionHeader,
-  StatRow,
   TextLink,
 } from "@/components/storefront/blocks";
 import { buttonVariants } from "@/components/ui/button";
@@ -92,11 +92,6 @@ export default async function CompanyProfileHomePage() {
   const boardTypes = content.home.boardTypes.length > 0 ? content.home.boardTypes : fallbackBoardTypes;
 
   const establishedYear = company.established.match(/\d{4}/)?.[0];
-  const stats = [
-    establishedYear && { value: establishedYear, label: "Established" },
-    content.equipment.groups.length > 0 && { value: String(content.equipment.groups.length), label: "Equipment lines" },
-    content.services.categories.length > 0 && { value: String(content.services.categories.length), label: "Service areas" },
-  ].filter((s): s is { value: string; label: string } => !!s);
 
   let featured: ProductCardData[] = [];
   try {
@@ -111,6 +106,8 @@ export default async function CompanyProfileHomePage() {
   }
 
   const primaryPhone = company.phones[0];
+  // Shown under the hero title only for brands that are visible AND marked authorized.
+  const authorizedBrands = content.brands.partners.filter((b) => b.authorized).map((b) => b.name);
 
   return (
     <div className="overflow-x-clip">
@@ -142,6 +139,25 @@ export default async function CompanyProfileHomePage() {
             <h1 className="mt-6 text-balance text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
               {content.home.heroTitle}
             </h1>
+            {authorizedBrands.length > 0 && (
+              <Link
+                href="/brands"
+                className="group mt-6 inline-flex max-w-full items-center gap-3 rounded-2xl border border-amber-300/50 bg-gradient-to-r from-amber-400/25 via-amber-300/10 to-white/5 py-2.5 pl-2.5 pr-4 shadow-lg shadow-amber-500/10 backdrop-blur transition-colors hover:border-amber-300 sm:gap-4 sm:py-3 sm:pl-3 sm:pr-5"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-navy-950 shadow-md shadow-amber-500/30 sm:h-12 sm:w-12">
+                  <BadgeCheck className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden />
+                </span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300 sm:text-xs">
+                    Authorized Dealer of
+                  </span>
+                  <span className="mt-0.5 block text-lg font-bold tracking-tight text-white sm:text-2xl">
+                    {authorizedBrands.join(" & ")}
+                  </span>
+                </span>
+                <ArrowRight className="h-5 w-5 shrink-0 text-amber-300 transition-transform duration-200 group-hover:translate-x-1" aria-hidden />
+              </Link>
+            )}
             {content.home.heroSubtitle && (
               <p className="mt-5 text-balance text-lg font-semibold text-accent-400 sm:text-2xl">{content.home.heroSubtitle}</p>
             )}
@@ -158,12 +174,6 @@ export default async function CompanyProfileHomePage() {
               </Link>
             </div>
           </div>
-
-          {stats.length > 0 && (
-            <div className="mt-10 max-w-xl animate-fade-up [animation-delay:150ms] sm:mt-14">
-              <StatRow stats={stats} dark />
-            </div>
-          )}
         </div>
       </section>
 

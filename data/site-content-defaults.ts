@@ -1,6 +1,7 @@
 import { company } from "./company";
 import { serviceCategories, wedgeBrands } from "./services";
 import { equipmentGroups, partsSourcing } from "./equipment";
+import { partnerBrands } from "./brands";
 
 export interface SiteContentDefault {
   key: string;
@@ -338,6 +339,31 @@ export const SITE_CONTENT_DEFAULTS: SiteContentDefault[] = [
     sortOrder: 6,
   },
 
+  // ── Brands (structured JSON, editable in dashboard) ──────────
+  {
+    key: "brands.hero_title",
+    group: "brands",
+    label: "Brands hero title",
+    value: "Partner Brands",
+    sortOrder: 1,
+  },
+  {
+    key: "brands.hero_description",
+    group: "brands",
+    label: "Brands hero description",
+    value: "Brands whose equipment, spare parts and consumables CLM offers. Information and inquiry only.",
+    sortOrder: 2,
+  },
+  {
+    key: "brands.partners",
+    group: "brands",
+    label: "Partner brands",
+    description: "Managed in the Brands editor below — logo, description, product lines and dealer status per brand.",
+    value: partnerBrands.map((b) => b.name).join("\n"),
+    data: partnerBrands,
+    sortOrder: 3,
+  },
+
   // ── Contact / Board repair ───────────────────────────────────
   {
     key: "contact.hero_title",
@@ -369,5 +395,6 @@ export const SITE_CONTENT_GROUPS = [
   { id: "about", label: "About page", hint: "Hero title, intro, registration section text." },
   { id: "services", label: "Services", hint: "Hero text, wedge brands, and the 9 service categories with bullets." },
   { id: "equipment", label: "Equipment", hint: "Hero text, equipment groups with models, parts sourcing." },
+  { id: "brands", label: "Brands", hint: "Partner brands on the Brands page: logo, description, product lines, Authorized Dealer status." },
   { id: "contact", label: "Contact & Board Repair", hint: "Contact title and board-repair hero copy." },
 ] as const;

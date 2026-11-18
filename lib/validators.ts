@@ -82,6 +82,35 @@ export const boardRepairSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+/** Brand logo: empty, or a same-site path (/media/... upload or a /public file). Never an external URL. */
+export const brandLogoSchema = z
+  .string()
+  .max(500)
+  .refine((v) => v === "" || (/^\/[A-Za-z0-9._\/-]+$/.test(v) && !v.includes("//") && !v.includes("..")), "Logo must be a site path like /media/... or /brands/logo.png");
+
+export const brandWebsiteSchema = z
+  .string()
+  .max(300)
+  .refine((v) => v === "" || /^https?:\/\/[^\s"'<>]+$/i.test(v), "Website must start with http:// or https://");
+
+/** Partner brands (Website Content → Brands). Linked to products by the Manufacturer field. */
+export const partnerBrandsSchema = z
+  .array(
+    z.object({
+      id: slugSchema,
+      name: z.string().min(1).max(120),
+      manufacturer: z.string().max(120),
+      description: z.string().max(2000),
+      logo: brandLogoSchema,
+      website: brandWebsiteSchema,
+      lines: z.array(z.string().min(1).max(200)).max(20),
+      authorized: z.boolean(),
+      isActive: z.boolean(),
+    })
+  )
+  .max(30)
+  .refine((list) => new Set(list.map((b) => b.id)).size === list.length, "Each brand needs a unique ID");
+
 export const inviteUserSchema = z.object({
   email: z.string().email().max(200).transform((v) => v.trim().toLowerCase()),
   name: z.string().max(120).nullable().optional(),

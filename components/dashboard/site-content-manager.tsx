@@ -3,8 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toaster";
-import { updateSiteContent, updateSiteContentJson } from "@/app/actions/site-content";
-import { Input, Textarea, Label, FieldError } from "@/components/ui/form";
+import { updateSiteContent, updateSiteContentJson, uploadBrandLogo } from "@/app/actions/site-content";
+import { Input, Textarea, Label, Checkbox, FieldError } from "@/components/ui/form";
+import type { PartnerBrand } from "@/data/brands";
+import { downscaleFormImages } from "@/lib/client-image";
+import { MAX_IMAGE_SIZE_BYTES, ALLOWED_IMAGE_MIME_TYPES } from "@/lib/catalog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, Badge } from "@/components/ui/card";
 import { SITE_CONTENT_GROUPS } from "@/data/site-content-defaults";
@@ -68,6 +71,7 @@ export function SiteContentManager({ initial }: { initial: ContentRow[] }) {
           if (row.key === "services.categories") return <ServicesEditor key={row.key} row={row} />;
           if (row.key === "equipment.groups") return <EquipmentEditor key={row.key} row={row} />;
           if (row.key === "equipment.parts_sourcing") return <PartsEditor key={row.key} row={row} />;
+          if (row.key === "brands.partners") return <BrandsEditor key={row.key} row={row} />;
           return <TextEntryCard key={row.key} row={row} />;
         })}
         {rows.length === 0 && (
@@ -417,6 +421,190 @@ function EquipmentEditor({ row }: { row: ContentRow }) {
         ))}
         <FieldError message={error} />
         <Button size="sm" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save equipment"}</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Partner brands ───────────────────────────────────────────── */
+function BrandsEditor({ row }: { row: ContentRow }) {
+  const router = useRouter();
+  const [brands, setBrands] = useState<PartnerBrand[]>(Array.isArray(row.data) ? row.data : []);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+
+  function patch(id: string, p: Partial<PartnerBrand>) {
+    setBrands((bs) => bs.map((b) => (b.id === id ? { ...b, ...p } : b)));
+  }
+
+  async function uploadLogo(id: string, file: File | undefined) {
+    if (!file) return;
+    if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.type)) return toast.error("Only JPEG, PNG, WebP, or AVIF allowed");
+    if (file.size > MAX_IMAGE_SIZE_BYTES) return toast.error("Logo must be 5 MB or smaller");
+    setUploading(id);
+    try {
+      const form = new FormData();
+      form.set("logo", file);
+      await downscaleFormImages(form, "logo");
+      const result = await uploadBrandLogo(form);
+      if (result.ok) {
+        patch(id, { logo: result.url });
+        toast.success("Logo uploaded — click “Save brands” to publish it");
+      } else {
+        toast.error(result.error);
+      }
+    } catch {
+      toast.error("Logo upload failed. Please try again.");
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function save() {
+    setError(null);
+    if (brands.some((b) => !b.name.trim())) {
+      setError("Every brand needs a name.");
+      return;
+    }
+    setPending(true);
+    try {
+      const form = new FormData();
+      form.set(
+        "data",
+        JSON.stringify(
+          brands.map((b) => ({
+            id: b.id,
+            name: b.name.trim(),
+            manufacturer: b.manufacturer.trim(),
+            description: b.description.trim(),
+            logo: b.logo.trim(),
+            website: b.website.trim(),
+            lines: b.lines.map((l) => l.trim()).filter(Boolean),
+            authorized: b.authorized,
+            isActive: b.isActive,
+          }))
+        )
+      );
+      const result = await updateSiteContentJson(row.key, form);
+      if (result.ok) {
+        toast.success("Brands saved — website updated");
+        router.refresh();
+      } else {
+        setError(result.error);
+      }
+    } catch {
+      setError("Could not save. Please try again.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-bold text-navy-900">{row.label}</p>
+          <p className="font-mono text-[11px] text-slate-400">{row.key} · {brands.length} brands</p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            setBrands((bs) => [
+              ...bs,
+              { id: `brand-${Date.now().toString(36)}`, name: "", manufacturer: "", description: "", logo: "", website: "", lines: [], authorized: false, isActive: false },
+            ])
+          }
+        >
+          + Add brand
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-slate-500">
+          Shown on the Brands page. A brand&apos;s products are the published products whose Manufacturer field
+          matches its “Product manufacturer” exactly.
+        </p>
+        {brands.map((b) => (
+          <details key={b.id} className="rounded-lg border border-slate-200">
+            <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-4 py-3 text-sm font-bold text-navy-900">
+              {b.name || "(Untitled brand)"}
+              {b.isActive ? <Badge variant="success">Shown</Badge> : <Badge variant="muted">Hidden</Badge>}
+              {b.authorized && <Badge>Authorized dealer</Badge>}
+            </summary>
+            <div className="grid gap-2 border-t border-slate-100 p-4">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <Label>Brand name *</Label>
+                  <Input value={b.name} maxLength={120} onChange={(e) => patch(b.id, { name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Product manufacturer</Label>
+                  <Input value={b.manufacturer} maxLength={120} placeholder="Same text as the product Manufacturer field" onChange={(e) => patch(b.id, { manufacturer: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea rows={3} value={b.description} maxLength={2000} onChange={(e) => patch(b.id, { description: e.target.value })} />
+              </div>
+              <div>
+                <Label>Product lines (one per line)</Label>
+                <Textarea rows={4} value={b.lines.join("\n")} onChange={(e) => patch(b.id, { lines: e.target.value.split("\n") })} />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <Label>Logo</Label>
+                  <div className="flex items-center gap-3">
+                    {b.logo && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={b.logo} alt="" className="h-12 w-24 rounded border border-slate-200 bg-white object-contain p-1" />
+                    )}
+                    <input
+                      type="file"
+                      aria-label={`Logo for ${b.name || "brand"}`}
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      disabled={uploading === b.id}
+                      onChange={(e) => {
+                        void uploadLogo(b.id, e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                      className="block w-full text-sm text-slate-600 file:mr-3 file:rounded file:border file:border-slate-300 file:bg-slate-50 file:px-3 file:py-2 file:text-sm file:font-semibold hover:file:bg-slate-100"
+                    />
+                  </div>
+                  {b.logo && (
+                    <button type="button" className="mt-1 text-xs font-semibold text-red-600 hover:underline" onClick={() => patch(b.id, { logo: "" })}>
+                      Remove logo
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <Label>Website (optional)</Label>
+                  <Input value={b.website} maxLength={300} placeholder="https://…" onChange={(e) => patch(b.id, { website: e.target.value })} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-navy-900">
+                <Checkbox checked={b.isActive} onChange={(e) => patch(b.id, { isActive: e.target.checked })} /> Show on website
+              </label>
+              <label className="flex items-start gap-2 text-sm font-medium text-navy-900">
+                <Checkbox className="mt-0.5" checked={b.authorized} onChange={(e) => patch(b.id, { authorized: e.target.checked })} />
+                <span>
+                  Authorized dealer
+                  <span className="block text-xs font-normal text-slate-500">
+                    Shows an “Authorized Dealer” badge. Tick only after the partnership is verified and approved.
+                  </span>
+                </span>
+              </label>
+              <div>
+                <Button size="sm" variant="danger" onClick={() => setBrands((bs) => bs.filter((x) => x.id !== b.id))}>
+                  Remove brand
+                </Button>
+              </div>
+            </div>
+          </details>
+        ))}
+        {brands.length === 0 && <p className="text-sm text-slate-500">No brands yet — add the first one.</p>}
+        <FieldError message={error} />
+        <Button size="sm" onClick={save} disabled={pending || uploading !== null}>{pending ? "Saving…" : "Save brands"}</Button>
       </CardContent>
     </Card>
   );

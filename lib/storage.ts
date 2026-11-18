@@ -89,6 +89,11 @@ export async function uploadRepairImage(opts: { file: File }) {
   return putImage("clm/repairs", opts.file);
 }
 
+/** Brand logo: clm/brands/<timestamp>-<rand>-<name>.webp */
+export async function uploadBrandImage(opts: { file: File }) {
+  return putImage("clm/brands", opts.file);
+}
+
 /** Delete by key. The owning DB row must be deleted even if this fails. */
 export async function deleteProductImage(key: string) {
   await prisma.mediaFile.deleteMany({ where: { key } });

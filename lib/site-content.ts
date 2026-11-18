@@ -1,8 +1,10 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
+import { brandLogoSchema, brandWebsiteSchema } from "./validators";
 import { SITE_CONTENT_DEFAULTS } from "@/data/site-content-defaults";
 import type { ServiceCategory } from "@/data/services";
 import type { EquipmentGroup, PartsSourcingGroup } from "@/data/equipment";
+import type { PartnerBrand } from "@/data/brands";
 
 export interface SiteContentRow {
   key: string;
@@ -147,8 +149,28 @@ export interface SiteContentView {
     groups: EquipmentGroup[];
     partsSourcing: PartsSourcingGroup[];
   };
+  /** `partners` holds only the brands marked "Show on website". */
+  brands: { heroTitle: string; heroDescription: string; partners: PartnerBrand[] };
   contact: { heroTitle: string };
   boardRepair: { heroTitle: string; heroDescription: string };
+}
+
+/** Public brand list: hidden brands are dropped and "authorized" must be exactly true. */
+function visibleBrands(data: unknown): PartnerBrand[] {
+  if (!Array.isArray(data)) return [];
+  return (data as Partial<PartnerBrand>[])
+    .filter((b) => !!b && typeof b === "object" && b.isActive === true && typeof b.name === "string" && !!b.name)
+    .map((b) => ({
+      id: String(b.id ?? b.name),
+      name: String(b.name),
+      manufacturer: String(b.manufacturer ?? ""),
+      description: String(b.description ?? ""),
+      logo: brandLogoSchema.safeParse(b.logo).data ?? "",
+      website: brandWebsiteSchema.safeParse(b.website).data ?? "",
+      lines: Array.isArray(b.lines) ? b.lines.map(String) : [],
+      authorized: b.authorized === true,
+      isActive: true,
+    }));
 }
 
 /** One cached call that resolves every storefront copy block. */
@@ -213,6 +235,11 @@ export async function getSiteContent(): Promise<SiteContentView> {
       partsDescription: v("equipment.parts_description"),
       groups: equipmentData,
       partsSourcing: partsData,
+    },
+    brands: {
+      heroTitle: v("brands.hero_title"),
+      heroDescription: v("brands.hero_description"),
+      partners: visibleBrands(map["brands.partners"]?.data),
     },
     contact: { heroTitle: v("contact.hero_title") },
     boardRepair: { heroTitle: v("board_repair.hero_title"), heroDescription: v("board_repair.hero_description") },

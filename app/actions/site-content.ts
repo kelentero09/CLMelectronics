@@ -5,7 +5,9 @@ import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/authz";
-import { firstIssueMessage } from "@/lib/validators";
+import { firstIssueMessage, partnerBrandsSchema } from "@/lib/validators";
+import { uploadBrandImage, deleteProductImage, storagePathFromUrl } from "@/lib/storage";
+import { SITE_CONTENT_DEFAULTS } from "@/data/site-content-defaults";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -40,7 +42,31 @@ const JSON_KEYS: Record<string, z.ZodTypeAny> = {
   "services.categories": z.array(serviceCategorySchema).max(30),
   "equipment.groups": z.array(equipmentGroupSchema).max(30),
   "equipment.parts_sourcing": z.array(partsGroupSchema).max(30),
+  "brands.partners": partnerBrandsSchema,
 };
+
+/**
+ * Rows are created by the seed. A key added after launch (e.g. brands.*) has
+ * no row yet, so it is created from its built-in default on first save.
+ * Unknown keys are still rejected.
+ */
+async function findOrCreateEntry(key: string) {
+  const existing = await prisma.siteContent.findUnique({ where: { key } });
+  if (existing) return existing;
+  const d = SITE_CONTENT_DEFAULTS.find((e) => e.key === key);
+  if (!d) return null;
+  return prisma.siteContent.create({
+    data: {
+      key: d.key,
+      group: d.group,
+      label: d.label,
+      description: d.description ?? null,
+      value: d.value,
+      data: d.data === undefined ? undefined : d.data,
+      sortOrder: d.sortOrder,
+    },
+  });
+}
 
 /** Keys edited as one-per-line textareas — value + data (string[]) stay in sync. */
 const LIST_KEYS = new Set([
@@ -62,7 +88,7 @@ function revalidateAll() {
   // Immediate cache-tag expiration inside the Server Action (Next 16),
   // plus path revalidation so ISR pages rebuild on next visit.
   updateTag("site-content");
-  for (const p of ["/", "/about", "/services", "/equipment", "/contact", "/board-repair", "/admin/content"]) {
+  for (const p of ["/", "/about", "/services", "/equipment", "/brands", "/contact", "/board-repair", "/admin/content"]) {
     revalidatePath(p);
   }
 }
@@ -84,7 +110,7 @@ export async function updateSiteContent(form: FormData): Promise<ActionResult> {
     });
     if (!parsed.success) return { ok: false, error: firstIssueMessage(parsed.error) };
 
-    const existing = await prisma.siteContent.findUnique({ where: { key: parsed.data.key } });
+    const existing = await findOrCreateEntry(parsed.data.key);
     if (!existing) return { ok: false, error: "Content entry not found. Run the seed to restore it." };
 
     const data = LIST_KEYS.has(parsed.data.key) ? toLines(parsed.data.value) : undefined;
@@ -118,7 +144,7 @@ export async function updateSiteContentJson(key: string, form: FormData): Promis
     const parsed = schema.safeParse(parseJsonField(form, "data"));
     if (!parsed.success) return { ok: false, error: firstIssueMessage(parsed.error) };
 
-    const existing = await prisma.siteContent.findUnique({ where: { key } });
+    const existing = await findOrCreateEntry(key);
     if (!existing) return { ok: false, error: "Content entry not found. Run the seed to restore it." };
 
     // Keep a readable `value` alongside JSON for simple entries (cards as
@@ -132,13 +158,46 @@ export async function updateSiteContentJson(key: string, form: FormData): Promis
       value = (parsed.data as { brand: string; label: string }[]).map((g) => `${g.brand} — ${g.label}`).join("\n");
     } else if (key === "equipment.parts_sourcing") {
       value = (parsed.data as { brand: string }[]).map((g) => g.brand).join("\n");
+    } else if (key === "brands.partners") {
+      value = (parsed.data as { name: string }[]).map((b) => b.name).join("\n");
     }
 
     await prisma.siteContent.update({ where: { key }, data: { value, data: parsed.data as never } });
+
+    if (key === "brands.partners") {
+      // Delete uploaded logos that are no longer used by any brand.
+      const kept = new Set((parsed.data as { logo: string }[]).map((b) => b.logo));
+      const previous = Array.isArray(existing.data) ? (existing.data as { logo?: unknown }[]) : [];
+      for (const b of previous) {
+        const path = typeof b?.logo === "string" && !kept.has(b.logo) ? storagePathFromUrl(b.logo) : null;
+        if (path?.startsWith("clm/brands/")) await deleteProductImage(path).catch((e) => console.error("[site-content action] logo cleanup failed", e));
+      }
+    }
+
     revalidateAll();
     return { ok: true };
   } catch (e) {
     unstable_rethrow(e);
     return fail(e);
+  }
+}
+
+/** Upload a brand logo. Returns its /media/... path; it is stored on the brand when the list is saved. */
+export async function uploadBrandLogo(form: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  try {
+    await requireAdmin();
+    const file = form.get("logo");
+    if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose an image to upload." };
+    try {
+      const { publicUrl } = await uploadBrandImage({ file });
+      return { ok: true, url: publicUrl };
+    } catch (e) {
+      unstable_rethrow(e);
+      console.error("[site-content action] logo upload failed", e);
+      return { ok: false, error: "Logo upload failed. Only JPEG, PNG, WebP, or AVIF up to 5 MB." };
+    }
+  } catch (e) {
+    unstable_rethrow(e);
+    return fail(e) as { ok: false; error: string };
   }
 }
